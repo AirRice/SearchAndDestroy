@@ -4,35 +4,35 @@ using UnityEngine;
 using System.Text.RegularExpressions;
 using System;
 
-public class Station : MonoBehaviour
+public class Node : MonoBehaviour
 {
-    public int stationID = 0;
+    public int nodeID = 0;
     public LineHandler lineHandlerPrefab;
     public Material lineActiveMat;
     public Material lineMat;
     public Material unselectedMat;
     public Material selectedMat;
-    public static Station getStation(int id)
+    public static Node getNode(int id)
     {
-        GameObject stationObject = Station.getStationObject(id);
-        if(stationObject!=null)
-            return stationObject.GetComponent<Station> ();
+        GameObject nodeObject = Node.getNodeObject(id);
+        if(nodeObject!=null)
+            return nodeObject.GetComponent<Node> ();
         else
             return null;
     }
-    public static GameObject getStationObject(int id)
+    public static GameObject getNodeObject(int id)
     {
-        return GameObject.Find("Station" + id);
+        return GameObject.Find("Node" + id);
     }
     void Awake()
     {
-        // TODO: this is a patchwork solution for station ID enforcement, fix this later when generating stations automatically.
+        // TODO: this is a patchwork solution for node ID enforcement, fix this later when generating nodes automatically.
         /*
-        string inferredIDString = Regex.Match(gameObject.name, @"Station(\d+)").Groups[1].Value;
+        string inferredIDString = Regex.Match(gameObject.name, @"Node(\d+)").Groups[1].Value;
         if (!string.IsNullOrWhiteSpace(inferredIDString))
         {
             Debug.Log(inferredIDString);
-            stationID = Int32.Parse(inferredIDString);
+            nodeID = Int32.Parse(inferredIDString);
         }
         */
     }
@@ -74,10 +74,10 @@ public class Station : MonoBehaviour
         }
     }
     void OnMouseDown(){
-        GameController.gameController.TryMoveToStation(this.stationID);
+        GameController.gameController.TryMoveToNode(this.nodeID);
     }
 
-    public void AddOtherStation(Station st)
+    public void AddOtherNode(Node st)
     {
         //Set lines to draw
         Vector3[] positions = {gameObject.transform.position,st.gameObject.transform.position};

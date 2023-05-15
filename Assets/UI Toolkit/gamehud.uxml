@@ -2,7 +2,7 @@
     <ui:VisualElement style="height: 100%;">
         <ui:Label text="Current Player:" display-tooltip-when-elided="true" name="LabelCurPlayer" style="font-size: 20px; -unity-text-align: lower-left; align-items: flex-start; height: 30px;" />
         <ui:Button text="End Turn" display-tooltip-when-elided="true" name="ButtonEndTurn" style="width: 18%; height: 40px; font-size: 20px;" />
-        <ui:Label display-tooltip-when-elided="true" name="LabelMove3Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket3.png?fileID=2800000&amp;guid=791365a4478723946a641cad66355da4&amp;type=3#ticket3&apos;); left: 0;" />
+        <ui:Label display-tooltip-when-elided="true" name="LabelMove3Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket3.png?fileID=2800000&amp;guid=791365a4478723946a641cad66355da4&amp;type=3#ticket3&apos;); left: 0; -unity-background-image-tint-color: rgba(255, 255, 255, 255);" />
         <ui:Label display-tooltip-when-elided="true" name="LabelMove2Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket2.png?fileID=2800000&amp;guid=e57ce08ab7fd077418230288383e2bd0&amp;type=3#ticket2&apos;); left: 0;" />
         <ui:Label display-tooltip-when-elided="true" name="LabelMove1Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket1.png?fileID=2800000&amp;guid=3456ed60c01246a41bf614da73828c9a&amp;type=3#ticket1&apos;); left: 0;" />
     </ui:VisualElement>

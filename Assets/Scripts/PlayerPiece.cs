@@ -8,8 +8,8 @@ public class PlayerPiece : MonoBehaviour
     public int playerID = 0;
     public Material hunterMat;
     public Material hiddenMat;
-    public int currentStationID = 0;
-    private int lastStationID = 0;
+    public int currentNodeID = 0;
+    private int lastNodeID = 0;
     private Vector3 offset = new Vector3(0,0.75f,0);
     private Dictionary<int, int[]> cachedPaths = new Dictionary<int, int[]>();
 
@@ -22,25 +22,25 @@ public class PlayerPiece : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(lastStationID!=currentStationID)
+        if(lastNodeID!=currentNodeID)
         {
-            lastStationID = currentStationID;
+            lastNodeID = currentNodeID;
             //Wipe the cached Paths from the previous location as it has now changed
             cachedPaths = new Dictionary<int, int[]>();
-            //Debug.Log($"Wiped path caches for player{playerID}, new laststation = {lastStationID}, current = {currentStationID}");
+            //Debug.Log($"Wiped path caches for player{playerID}, new lastnode = {lastNodeID}, current = {currentNodeID}");
         }
     }
     // Try handling path checks
-    public void TryPathHighlight(Station destStation, bool toHighlight=true)
+    public void TryPathHighlight(Node destNode, bool toHighlight=true)
     {   
         int[] pathToHovered;
         int remainingMoves = GameController.gameController.currentPlayerMoves;
-        Debug.Log(cachedPaths.ContainsKey(destStation.stationID));
-        if(!cachedPaths.TryGetValue(destStation.stationID, out pathToHovered))
+        Debug.Log(cachedPaths.ContainsKey(destNode.nodeID));
+        if(!cachedPaths.TryGetValue(destNode.nodeID, out pathToHovered))
         {
-            pathToHovered = GameController.gameController.searchPath(Station.getStation(this.currentStationID), destStation);
-            Debug.Log($"Added cached path to station {destStation.stationID}, path:"+string.Join(" ",pathToHovered));
-            cachedPaths.Add(destStation.stationID,pathToHovered);
+            pathToHovered = GameController.gameController.searchPath(Node.getNode(this.currentNodeID), destNode);
+            Debug.Log($"Added cached path to node {destNode.nodeID}, path:"+string.Join(" ",pathToHovered));
+            cachedPaths.Add(destNode.nodeID,pathToHovered);
         }
         if(pathToHovered.Length > 1)
         {
@@ -48,14 +48,14 @@ public class PlayerPiece : MonoBehaviour
             {   
                 int node1 = pathToHovered[i];
                 int node2 = pathToHovered[i+1];
-                //Debug.Log("stationLine"+node2+"-"+node1);
-                Station lineDestStation = Station.getStation(node2);
-                GameObject lineDrawer = GameObject.Find("stationLine"+node1+"-"+node2);
+                //Debug.Log("nodeLine"+node2+"-"+node1);
+                Node lineDestNode = Node.getNode(node2);
+                GameObject lineDrawer = GameObject.Find("nodeLine"+node1+"-"+node2);
                 if(lineDrawer==null)
-                    lineDrawer = GameObject.Find("stationLine"+node2+"-"+node1);
+                    lineDrawer = GameObject.Find("nodeLine"+node2+"-"+node1);
                     if(lineDrawer==null)
                         break;
-                lineDrawer.GetComponent<LineRenderer> ().material = (toHighlight && remainingMoves > 0) ? lineDestStation.lineActiveMat : lineDestStation.lineMat;
+                lineDrawer.GetComponent<LineRenderer> ().material = (toHighlight && remainingMoves > 0) ? lineDestNode.lineActiveMat : lineDestNode.lineMat;
                 remainingMoves--;
             }
         }
@@ -71,34 +71,34 @@ public class PlayerPiece : MonoBehaviour
             gameObject.GetComponent<MeshRenderer> ().material = hiddenMat;
         }
     }
-    public void setStation(int stationid, bool nomove = false)
+    public void setNode(int nodeid, bool nomove = false)
     {
-        if (stationid != currentStationID)
+        if (nodeid != currentNodeID)
         {
-            currentStationID = stationid;
-            GameObject stationObject = Station.getStationObject(stationid);
-            if (stationObject != null)
+            currentNodeID = nodeid;
+            GameObject nodeObject = Node.getNodeObject(nodeid);
+            if (nodeObject != null)
             {
                 if (!nomove)
-                    transform.position = stationObject.transform.position + offset;
+                    transform.position = nodeObject.transform.position + offset;
             }
         
         }
     }
     public void TrySmoothMove(int toMoveTo)
     {
-        if(toMoveTo == currentStationID)
+        if(toMoveTo == currentNodeID)
             return;
         int[] pathToHovered;
         if(!cachedPaths.TryGetValue(toMoveTo, out pathToHovered))
-            pathToHovered = GameController.gameController.searchPath(Station.getStation(this.currentStationID), Station.getStation(toMoveTo));
+            pathToHovered = GameController.gameController.searchPath(Node.getNode(this.currentNodeID), Node.getNode(toMoveTo));
         int remainingMoves = GameController.gameController.currentPlayerMoves;
-        StartCoroutine(MoveToPosition(this.transform.position, pathToHovered, this.currentStationID, toMoveTo, 1.5f));
+        StartCoroutine(MoveToPosition(this.transform.position, pathToHovered, this.currentNodeID, toMoveTo, 1.5f));
         //Debug.Log("Moving");
     }
     //Coroutine for smooth movement
     //TODO: Find way to make piece move over each node on path (may be solved?)
-    public IEnumerator MoveToPosition(Vector3 lastPos, int[] dests, int startStationID, int finalDestID, float timeToMove)
+    public IEnumerator MoveToPosition(Vector3 lastPos, int[] dests, int startNodeID, int finalDestID, float timeToMove)
     {
         Vector3 startPos = lastPos;
         timeToMove = timeToMove/Math.Max(dests.Length,1);
@@ -106,12 +106,12 @@ public class PlayerPiece : MonoBehaviour
         {
 
             Vector3 destPos = lastPos;
-            if (destID == startStationID)
+            if (destID == startNodeID)
                 continue;
             else
             {
-                GameObject stationObject = Station.getStationObject(destID);
-                destPos = stationObject.transform.position + this.offset;
+                GameObject nodeObject = Node.getNodeObject(destID);
+                destPos = nodeObject.transform.position + this.offset;
 
                 float t = 0f;
                 while(t < 1)
