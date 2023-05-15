@@ -16,6 +16,7 @@ public class GameController : MonoBehaviour
     public Node nodePrefab;
     public int localPlayerID = 0;
     public bool hotSeatMode = true;
+    public Dictionary<int, Node> nodesDict = new Dictionary<int, Node>();
     protected List<NodeLink> nodeLinksList = new List<NodeLink>();
     public List<PlayerPiece> playerPiecesList = new List<PlayerPiece>();
     public PlayerPiece hiddenPlayerPiece;
@@ -26,6 +27,9 @@ public class GameController : MonoBehaviour
     public int currentTurnPlayer = 0;
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
+
+    private float nodeVertDist = 5f;
+    private float nodeHorizDist = 4.5f;
     private void Awake()
     {
         //enforce singleton
@@ -36,33 +40,7 @@ public class GameController : MonoBehaviour
 
         // 
 
-        /*if (boardSetupData != null)
-        {
-            // load file for setting the board up. Format: each rank of the board (in number of nodes)
-            string[] fileLines = Regex.Split ( boardSetupData.text, "\n|\r|\r\n" );
-            string[] values = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
-            for ( int i=0; i < values.Length; i++ ) 
-            {
-                Node newNode = Instantiate(nodePrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            }
-        }*/
-        if (linksData != null)
-        {
-            // load file for setting links between nodes
-            string linksFile = linksData.text;
-            string[] fileLines = Regex.Split ( linksFile, "\n|\r|\r\n" );
-            
-            for ( int i=0; i < fileLines.Length; i++ ) 
-            {
-                string[] values = Regex.Split ( fileLines[i], ";" ); //file is split by semicolons
-                if (values.Length == 2)
-                {
-                    NodeLink newLink = new NodeLink(Int32.Parse(values[0]),Int32.Parse(values[1]));
-                    nodeLinksList.Add(newLink);
-                    //Debug.Log(newLink.ToString());
-                }
-            }
-        }
+        this.SetupBoard();
 
         // Find marked spawns for each team
         try{
@@ -90,6 +68,80 @@ public class GameController : MonoBehaviour
     {
         
     }
+    void SetupBoard(bool useFullSetup=true)
+    {   
+        if (useFullSetup)
+            if (boardSetupData != null)
+            {
+                // load file for setting the board up. Format: each rank of the board (in number of nodes)
+                string[] fileLines = Regex.Split ( boardSetupData.text, "\n|\r|\r\n" );
+                string[] values = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
+                float totalHorizLength = (values.Length-1) * nodeHorizDist;
+                int currentNodeID = 1;
+                for ( int i=0; i <values.Length; i++ ) 
+                {
+                    int nodeCountAtRank = Int32.Parse(values[i]);
+                    for ( int j=0; j < nodeCountAtRank; j++ ) 
+                    {
+                        float zLoc = (totalHorizLength/2)-(values.Length-(i+1))*nodeHorizDist;
+                        float xLoc = (nodeVertDist*(nodeCountAtRank-1)/2)-nodeVertDist*j;
+                        Node newNode = Instantiate(nodePrefab, new Vector3(xLoc, 0, zLoc), Quaternion.identity);
+                        newNode.nodeID = currentNodeID;
+                        newNode.gameObject.name = "Node"+currentNodeID;
+                        nodesDict.Add(currentNodeID, newNode);
+                        // Setup Spawn Points
+                        if(i==values.Length-1 && j==nodeCountAtRank-1)
+                            newNode.gameObject.tag = "HunterSpawn";
+                        else if(currentNodeID == 1)
+                            newNode.gameObject.tag = "HiddenSpawn";
+
+                        if(i>0)
+                        {
+                            int nodeCountPrevRank = Int32.Parse(values[i-1]);
+                            for (int k = 0; k<2; k++)
+                            {
+                                int otherNode;
+                                bool flag = false;
+                                if(nodeCountPrevRank==nodeCountAtRank)
+                                {
+                                    otherNode = currentNodeID-nodeCountAtRank;
+                                    flag = true;
+                                }    
+                                else
+                                {
+                                    otherNode = currentNodeID-(nodeCountAtRank>nodeCountPrevRank ? nodeCountAtRank : nodeCountPrevRank) + k;
+                                }
+                                if (otherNode < currentNodeID-(nodeCountPrevRank+j) || otherNode > currentNodeID-(j+1))
+                                    continue;
+                                NodeLink newLink = new NodeLink(currentNodeID,otherNode);
+                                nodeLinksList.Add(newLink);
+                                if(flag)
+                                    break;
+                            }
+                        }
+                        currentNodeID++;
+                    }
+                }
+            }
+        else if (linksData != null)
+        {
+            // load file for setting links between nodes
+            string linksFile = linksData.text;
+            string[] fileLines = Regex.Split ( linksFile, "\n|\r|\r\n" );
+            
+            for ( int i=0; i < fileLines.Length; i++ ) 
+            {
+                string[] values = Regex.Split ( fileLines[i], ";" ); //file is split by semicolons
+                if (values.Length == 2)
+                {
+                    NodeLink newLink = new NodeLink(Int32.Parse(values[0]),Int32.Parse(values[1]));
+                    nodeLinksList.Add(newLink);
+                    //Debug.Log(newLink.ToString());
+                }
+            }
+        }
+    }
+
     void SetupPlayerPositions(Node hunterSpawn, Node hiddenSpawn)
     {
         if(this.playersCount < 2) 
@@ -109,6 +161,7 @@ public class GameController : MonoBehaviour
         }
         ProgressTurn(false);
     }
+
     public void TryMoveToNode(int toMoveTo)
     {
         PlayerPiece toMovePlayerPiece = currentTurnPlayer==0 ? hiddenPlayerPiece : playerPiecesList[currentTurnPlayer-1];

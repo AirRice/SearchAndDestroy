@@ -14,15 +14,19 @@ public class Node : MonoBehaviour
     public Material selectedMat;
     public static Node getNode(int id)
     {
-        GameObject nodeObject = Node.getNodeObject(id);
-        if(nodeObject!=null)
-            return nodeObject.GetComponent<Node> ();
+        Node nodeObject;
+        if (GameController.gameController.nodesDict.TryGetValue(id, out nodeObject))
+            return nodeObject;
         else
             return null;
     }
     public static GameObject getNodeObject(int id)
     {
-        return GameObject.Find("Node" + id);
+        Node nodeObject = Node.getNode(id);
+        if(nodeObject!=null)
+            return nodeObject.gameObject;
+        else
+            return GameObject.Find("Node" + id);        
     }
     void Awake()
     {
