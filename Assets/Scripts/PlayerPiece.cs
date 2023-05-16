@@ -9,9 +9,7 @@ public class PlayerPiece : MonoBehaviour
     public Material hunterMat;
     public Material hiddenMat;
     public int currentNodeID = 0;
-    private int lastNodeID = 0;
     private Vector3 offset = new Vector3(0,0.75f,0);
-    private Dictionary<int, int[]> cachedPaths = new Dictionary<int, int[]>();
 
     // Start is called before the first frame update
     void Start()
@@ -22,26 +20,13 @@ public class PlayerPiece : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(lastNodeID!=currentNodeID)
-        {
-            lastNodeID = currentNodeID;
-            //Wipe the cached Paths from the previous location as it has now changed
-            cachedPaths = new Dictionary<int, int[]>();
-            //Debug.Log($"Wiped path caches for player{playerID}, new lastnode = {lastNodeID}, current = {currentNodeID}");
-        }
+
     }
     // Try handling path checks
     public void TryPathHighlight(Node destNode, bool toHighlight=true)
     {   
-        int[] pathToHovered;
         int remainingMoves = GameController.gameController.currentPlayerMoves;
-        Debug.Log(cachedPaths.ContainsKey(destNode.nodeID));
-        if(!cachedPaths.TryGetValue(destNode.nodeID, out pathToHovered))
-        {
-            pathToHovered = GameController.gameController.searchPath(Node.getNode(this.currentNodeID), destNode);
-            Debug.Log($"Added cached path to node {destNode.nodeID}, path:"+string.Join(" ",pathToHovered));
-            cachedPaths.Add(destNode.nodeID,pathToHovered);
-        }
+        int[] pathToHovered = GameController.gameController.getCappedPath(Node.getNode(this.currentNodeID),destNode,remainingMoves);
         if(pathToHovered.Length > 1)
         {
             for(int i = 0; i < pathToHovered.Length-1; i++)
@@ -85,15 +70,12 @@ public class PlayerPiece : MonoBehaviour
         
         }
     }
-    public void TrySmoothMove(int toMoveTo)
+    public void TrySmoothMove(int toMoveTo, int[] pathToHovered)
     {
         if(toMoveTo == currentNodeID)
-            return;
-        int[] pathToHovered;
-        if(!cachedPaths.TryGetValue(toMoveTo, out pathToHovered))
-            pathToHovered = GameController.gameController.searchPath(Node.getNode(this.currentNodeID), Node.getNode(toMoveTo));
+            return; 
         int remainingMoves = GameController.gameController.currentPlayerMoves;
-        StartCoroutine(MoveToPosition(this.transform.position, pathToHovered, this.currentNodeID, toMoveTo, 1.5f));
+        StartCoroutine(MoveToPosition(this.transform.position, pathToHovered, this.currentNodeID, toMoveTo, 0.65f));
         //Debug.Log("Moving");
     }
     //Coroutine for smooth movement

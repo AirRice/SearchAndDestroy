@@ -18,6 +18,7 @@ public class GameController : MonoBehaviour
     public bool hotSeatMode = true;
     public Dictionary<int, Node> nodesDict = new Dictionary<int, Node>();
     protected List<NodeLink> nodeLinksList = new List<NodeLink>();
+    private Dictionary<(int,int), int[]> cachedPaths = new Dictionary<(int,int), int[]>();
     public List<PlayerPiece> playerPiecesList = new List<PlayerPiece>();
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
@@ -164,8 +165,13 @@ public class GameController : MonoBehaviour
 
     public void TryMoveToNode(int toMoveTo)
     {
+        if(currentPlayerMoves < 1)
+            return;
         PlayerPiece toMovePlayerPiece = currentTurnPlayer==0 ? hiddenPlayerPiece : playerPiecesList[currentTurnPlayer-1];
-        toMovePlayerPiece.TrySmoothMove(toMoveTo);
+        int[] movePath = getCappedPath(Node.getNode(toMovePlayerPiece.currentNodeID), Node.getNode(toMoveTo), currentPlayerMoves);
+        currentPlayerMoves -= (movePath.Length-1);
+        Debug.Log(currentPlayerMoves);
+        toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
         UpdateActivePlayerPosition(toMoveTo);
     }
     public void UpdateActivePlayerPosition(int destID)
@@ -223,7 +229,7 @@ public class GameController : MonoBehaviour
 
     public void EndTurn()
     {}
-    // SEARCHING
+    // SEARCHING and CACHING
 
 
     public void HighlightAllPaths(bool highlighted = true)
@@ -233,6 +239,21 @@ public class GameController : MonoBehaviour
             lineDrawer.GetComponent<LineHandler> ().HighlightPath(highlighted);
         }
     }
+    
+    public int[] getCappedPath(Node startPoint, Node endPoint, int maxhops)
+    {
+        int[] foundPathRaw;
+        if(!cachedPaths.TryGetValue((startPoint.nodeID, endPoint.nodeID), out foundPathRaw))
+        {
+            foundPathRaw = this.searchPath(startPoint,endPoint);
+            cachedPaths.Add((startPoint.nodeID,endPoint.nodeID),foundPathRaw);
+        }
+        if(foundPathRaw.Length > maxhops+1)
+            return foundPathRaw.Take(maxhops+1).ToArray();
+        else   
+            return foundPathRaw;
+    }
+
     public int[] searchPath(Node startPoint, Node endPoint)
     //Tried implementing BFS, unsure if the most robust or fast
     //Adapted from python implementation https://stackoverflow.com/questions/8922060/how-to-trace-the-path-in-a-breadth-first-search/50575971#50575971
