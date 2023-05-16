@@ -58,14 +58,7 @@ public class Node : MonoBehaviour
         {
             gameObject.GetComponent<MeshRenderer> ().material = selectedMat;
             lastMouseOverState = true;
-            int gameCurrentTurnPlayer = GameController.gameController.currentTurnPlayer;
-            int localPlayer = GameController.gameController.localPlayerID;
-            if(localPlayer == gameCurrentTurnPlayer)
-            {
-                PlayerPiece localPlayerPiece = localPlayer==0 ? GameController.gameController.hiddenPlayerPiece : GameController.gameController.playerPiecesList[localPlayer-1];
-                if(localPlayerPiece!=null)
-                    localPlayerPiece.TryPathHighlight(this);
-            }
+            GameController.gameController.OnNodeHovered(this);
         }
     }
     void OnMouseExit()
@@ -74,11 +67,14 @@ public class Node : MonoBehaviour
         {
             gameObject.GetComponent<MeshRenderer> ().material = unselectedMat;
             lastMouseOverState = false;
-            GameController.gameController.HighlightAllPaths(false);
+            GameController.gameController.OnNodeDehovered(this);
         }
     }
     void OnMouseDown(){
-        GameController.gameController.TryMoveToNode(this.nodeID);
+        if(GameController.gameController.localPlayerID == GameController.gameController.currentTurnPlayer)
+        {
+            GameController.gameController.TryMoveToNode(this.nodeID);
+        }
     }
 
     public void AddOtherNode(Node st)

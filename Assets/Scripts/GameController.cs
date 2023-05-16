@@ -12,6 +12,7 @@ public class GameController : MonoBehaviour
     public TextAsset boardSetupData;
     public int playersCount = 2;
     //1 player is the hidden player, rest will be hunters
+    public int movesCount = 3;
     public PlayerPiece playerPrefab;
     public Node nodePrefab;
     public int localPlayerID = 0;
@@ -68,6 +69,16 @@ public class GameController : MonoBehaviour
     void Update()
     {
         
+    }
+    public PlayerPiece GetCurrentPlayerPiece()
+    {
+        PlayerPiece curPlayerPiece = currentTurnPlayer==0 ? hiddenPlayerPiece : playerPiecesList[currentTurnPlayer-1];
+        return curPlayerPiece;
+    }
+
+    public PlayerPiece GetLocalPlayerPiece()
+    {
+        return localPlayerID==0 ? hiddenPlayerPiece : playerPiecesList[localPlayerID-1];
     }
     void SetupBoard(bool useFullSetup=true)
     {   
@@ -167,25 +178,44 @@ public class GameController : MonoBehaviour
     {
         if(currentPlayerMoves < 1)
             return;
-        PlayerPiece toMovePlayerPiece = currentTurnPlayer==0 ? hiddenPlayerPiece : playerPiecesList[currentTurnPlayer-1];
+        PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
         int[] movePath = getCappedPath(Node.getNode(toMovePlayerPiece.currentNodeID), Node.getNode(toMoveTo), currentPlayerMoves);
         currentPlayerMoves -= (movePath.Length-1);
-        Debug.Log(currentPlayerMoves);
+        //Debug.Log(currentPlayerMoves);
+        
         toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
         UpdateActivePlayerPosition(toMoveTo);
     }
+    // Try handling path checks
+    public void TryPathHighlight(int[] pathToHovered, bool toHighlight=true)
+    {   
+        if(pathToHovered.Length > 1)
+        {
+            for(int i = 0; i < pathToHovered.Length-1; i++)
+            {   
+                int node1 = pathToHovered[i];
+                int node2 = pathToHovered[i+1];
+                //Debug.Log("nodeLine"+node2+"-"+node1);
+                Node lineDestNode = Node.getNode(node2);
+                GameObject lineDrawer = GameObject.Find("nodeLine"+node1+"-"+node2);
+                if(lineDrawer==null)
+                    lineDrawer = GameObject.Find("nodeLine"+node2+"-"+node1);
+                    if(lineDrawer==null)
+                        break;
+                lineDrawer.GetComponent<LineRenderer> ().material = toHighlight ? lineDestNode.lineActiveMat : lineDestNode.lineMat;
+            }
+        }
+    }
     public void UpdateActivePlayerPosition(int destID)
     {
-        PlayerPiece currentPlayerPiece;
+        PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();;
         if(currentTurnPlayer==0)
         {
             hiddenPlayerLocation = destID;
-            currentPlayerPiece = hiddenPlayerPiece;
         }
         else 
         {
             hunterPlayerLocations[currentTurnPlayer-1] = destID;
-            currentPlayerPiece = playerPiecesList[currentTurnPlayer-1];
         }
         currentPlayerPiece.setNode(destID,true);
     }
@@ -200,7 +230,7 @@ public class GameController : MonoBehaviour
                 localPlayerID = currentTurnPlayer;
             }
         }
-        currentPlayerMoves = 3;
+        currentPlayerMoves = movesCount;
         // Only handle hidden player if one *IS* the hidden player
         if(currentTurnPlayer==0 && localPlayerID == 0)
         {
@@ -227,8 +257,32 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void EndTurn()
-    {}
+
+    // CLIENTSIDE EVENT HANDLING
+    public void OnNodeHovered(Node thisNode)
+    {
+        if(localPlayerID == currentTurnPlayer)
+        {
+            PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
+            if(localPlayerPiece!=null)
+            {
+                int[] highlightedPath = getCappedPath(Node.getNode(localPlayerPiece.currentNodeID), thisNode, currentPlayerMoves);
+                int moveSpend = (movesCount-currentPlayerMoves)+highlightedPath.Length - 1;
+                TryPathHighlight(highlightedPath, true);
+                if(currentPlayerMoves>0)
+                    GameHud.gameHud.ShowMoveSpend(moveSpend);
+            }
+        }
+    }
+    public void OnNodeDehovered(Node thisNode)
+    {
+        if(localPlayerID == currentTurnPlayer)
+        {
+            HighlightAllPaths(false);
+            GameHud.gameHud.ShowMoveSpend(0);
+        }
+    }
+    
     // SEARCHING and CACHING
 
 
