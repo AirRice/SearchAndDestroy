@@ -7,10 +7,13 @@ using System;
 public class Node : MonoBehaviour
 {
     public int nodeID = 0;
+    private bool isInfected = false;
     public LineHandler lineHandlerPrefab;
     public Material lineActiveMat;
     public Material lineMat;
     public Material unselectedMat;
+    public Material infectedMat;
+    public Material infectedSelectedMat;
     public Material selectedMat;
     public static Node getNode(int id)
     {
@@ -56,7 +59,7 @@ public class Node : MonoBehaviour
     {
         if(!lastMouseOverState)
         {
-            gameObject.GetComponent<MeshRenderer> ().material = selectedMat;
+            gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedSelectedMat : selectedMat;
             lastMouseOverState = true;
             GameController.gameController.OnNodeHovered(this);
         }
@@ -65,7 +68,7 @@ public class Node : MonoBehaviour
     {
         if(lastMouseOverState)
         {
-            gameObject.GetComponent<MeshRenderer> ().material = unselectedMat;
+            gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedMat : unselectedMat;
             lastMouseOverState = false;
             GameController.gameController.OnNodeDehovered(this);
         }
@@ -73,7 +76,7 @@ public class Node : MonoBehaviour
     void OnMouseDown(){
         if(GameController.gameController.localPlayerID == GameController.gameController.currentTurnPlayer)
         {
-            GameController.gameController.TryMoveToNode(this.nodeID);
+            GameController.gameController.OnNodeClicked(this);
         }
     }
 
@@ -86,5 +89,22 @@ public class Node : MonoBehaviour
         lineHandler.SetupLine(positions,lineMat,lineActiveMat,this,st);
         
         //line.enabled = true;
+    }
+
+    public void DeInfect()
+    {
+        isInfected = false;
+        gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? selectedMat : unselectedMat;
+    }
+
+    public void Infect()
+    {
+        isInfected = true;
+        gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? infectedSelectedMat : infectedMat;
+    }
+
+    public bool IsInfected()
+    {
+        return isInfected;
     }
 }

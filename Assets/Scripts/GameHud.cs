@@ -5,7 +5,6 @@ using UnityEngine.UIElements;
 
 public class GameHud : MonoBehaviour
 {
-    public static GameHud gameHud;
     private int lastActivePlayer = -1;
     private int lastPlayerTurns = -1;
     private Label labelCurPlayer;
@@ -17,11 +16,6 @@ public class GameHud : MonoBehaviour
     private bool lastPlayerActionButtonDown;
     private void OnEnable()
     {
-        //enforce singleton
-        if (gameHud != null)
-            Destroy(gameHud.gameObject);
-        gameHud = this;
-
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
         VisualElement overlay = root.Q<VisualElement>("Overlay");
         labelCurPlayer = root.Q<Label>("LabelCurPlayer");

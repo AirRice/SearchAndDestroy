@@ -8,6 +8,7 @@ using System.Linq;
 public class GameController : MonoBehaviour
 {
     public static GameController gameController;
+    private GameHud gameHud;
     public TextAsset linksData;
     public TextAsset boardSetupData;
     public int playersCount = 2;
@@ -23,8 +24,9 @@ public class GameController : MonoBehaviour
     public List<PlayerPiece> playerPiecesList = new List<PlayerPiece>();
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
+    public bool currentPlayerDidSpecialAction = false;
     protected Node hunterSpawn, hiddenSpawn = null;
-    
+    public int infectedNodeID = -1;
     //The current turn will be, 0 = hidden player, all further players = i+1 in the hunterPlayerLocations array
     public int currentTurnPlayer = 0;
     protected int hiddenPlayerLocation;
@@ -41,7 +43,7 @@ public class GameController : MonoBehaviour
             Destroy(gameObject);
 
         // 
-
+        gameHud = gameObject.GetComponent<GameHud>();
         this.SetupBoard();
 
         // Find marked spawns for each team
@@ -178,9 +180,14 @@ public class GameController : MonoBehaviour
     {
         if(currentPlayerMoves < 1)
             return;
+        if(toMoveTo == infectedNodeID && localPlayerID != 0)
+        {
+            return;    
+        }
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
         int[] movePath = getCappedPath(Node.getNode(toMovePlayerPiece.currentNodeID), Node.getNode(toMoveTo), currentPlayerMoves);
         currentPlayerMoves -= (movePath.Length-1);
+        toMoveTo = movePath.Last();
         //Debug.Log(currentPlayerMoves);
         
         toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
@@ -206,6 +213,15 @@ public class GameController : MonoBehaviour
             }
         }
     }
+    public void TryNodeInfect(Node toInfect)
+    {
+        infectedNodeID = toInfect.nodeID;
+        toInfect.Infect();
+    }
+    public void TryNodeScan(Node toScan)
+    {
+
+    }
     public void UpdateActivePlayerPosition(int destID)
     {
         PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();;
@@ -230,23 +246,35 @@ public class GameController : MonoBehaviour
                 localPlayerID = currentTurnPlayer;
             }
         }
+        gameHud.ResetPlayerActionButton();
         currentPlayerMoves = movesCount;
+        currentPlayerDidSpecialAction = false;
+        if(infectedNodeID!=-1)
+            cachedPaths = new Dictionary<(int,int), int[]>();
         // Only handle hidden player if one *IS* the hidden player
-        if(currentTurnPlayer==0 && localPlayerID == 0)
+        if(currentTurnPlayer==0)
         {
             this.StartHiddenTurn();
         }
         else if(localPlayerID != 0)
         {
-            Destroy(hiddenPlayerPiece.gameObject);
+            if(hiddenPlayerPiece != null)
+                Destroy(hiddenPlayerPiece.gameObject);
         }
     }
 
     void StartHiddenTurn()
     {
-        if(this.localPlayerID!=0)
-            return;
-        if(hiddenPlayerPiece == null)
+        infectedNodeID = -1;
+        foreach(KeyValuePair<int,Node> nodePair in nodesDict)
+        {
+            // Reset node infected state when the hidden player's turn activates
+            if(nodePair.Value.IsInfected())
+            {
+                nodePair.Value.DeInfect();
+            }
+        }
+        if(this.localPlayerID==0 && hiddenPlayerPiece == null)
         {
             PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             hiddenPlayer.SetHidden(true);
@@ -266,11 +294,13 @@ public class GameController : MonoBehaviour
             PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
             if(localPlayerPiece!=null)
             {
+                if(gameHud.playerActionButtonDown)
+                    return;
                 int[] highlightedPath = getCappedPath(Node.getNode(localPlayerPiece.currentNodeID), thisNode, currentPlayerMoves);
                 int moveSpend = (movesCount-currentPlayerMoves)+highlightedPath.Length - 1;
                 TryPathHighlight(highlightedPath, true);
                 if(currentPlayerMoves>0)
-                    GameHud.gameHud.ShowMoveSpend(moveSpend);
+                    gameHud.ShowMoveSpend(moveSpend);
             }
         }
     }
@@ -279,10 +309,46 @@ public class GameController : MonoBehaviour
         if(localPlayerID == currentTurnPlayer)
         {
             HighlightAllPaths(false);
-            GameHud.gameHud.ShowMoveSpend(0);
+            gameHud.ShowMoveSpend(0);
         }
     }
-    
+    public void OnNodeClicked(Node thisNode)
+    {
+        if(!gameHud.playerActionButtonDown)
+            TryMoveToNode(thisNode.nodeID);
+        else
+        {
+            if(currentPlayerMoves < 1)
+                return;
+            PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
+            Node playerNode = Node.getNode(toMovePlayerPiece.currentNodeID);
+            bool isAdjacent = false;
+            foreach(NodeLink link in nodeLinksList)
+            {
+                if(link.IsLinkBetween(playerNode.nodeID,thisNode.nodeID))
+                {
+                    isAdjacent = true;
+                    break;
+                }
+            }
+            if (isAdjacent)
+            {
+                currentPlayerMoves--;
+                if (localPlayerID == 0)
+                {               
+                    if(currentPlayerDidSpecialAction)
+                        return;
+                    currentPlayerDidSpecialAction = true;
+                    gameHud.playerActionButtonDown = false;
+                    TryNodeInfect(thisNode);
+                }
+                else
+                {
+                    TryNodeScan(thisNode);
+                }
+            }
+        }
+    }
     // SEARCHING and CACHING
 
 
@@ -329,6 +395,8 @@ public class GameController : MonoBehaviour
             foreach(NodeLink link in nodeLinksList)
             {
                 int? otherNode = link.getOtherNode(vpath.Item1);
+                if(otherNode.HasValue && otherNode.Value == infectedNodeID && localPlayerID != 0)
+                    continue;
                 if(otherNode == endPoint.nodeID)
                     return vpath.Item2.Concat(new int[] {endPoint.nodeID}).ToArray();
                 else

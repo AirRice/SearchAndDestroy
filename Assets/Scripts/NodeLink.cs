@@ -34,4 +34,8 @@ public class NodeLink
         else
             return nodeB;
     }
+    public bool IsLinkBetween(int a, int b)
+    {
+        return (nodeA == a && nodeB == b || nodeA == b && nodeB == a);
+    }
 }
