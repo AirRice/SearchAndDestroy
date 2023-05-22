@@ -15,6 +15,7 @@ public class GameController : MonoBehaviour
     public int playersCount = 2;
     //1 player is the hidden player, rest will be hunters
     public int movesCount = 3;
+    public int maxTurnCount = 15;
     public PlayerPiece playerPrefab;
     public Node nodePrefab;
     public int localPlayerID = 0;
@@ -29,12 +30,10 @@ public class GameController : MonoBehaviour
     public int currentTurnPlayer = 0;
     public bool gameEnded = false;
     public int turnCount = 0;
-    public int maxTurnCount = 0;
     protected Node hunterSpawn, hiddenSpawn = null;
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
     protected List<NodeLink> nodeLinksList = new List<NodeLink>();
-
     private Dictionary<(int,int), int[]> cachedPaths = new Dictionary<(int,int), int[]>();
     private float nodeVertDist = 5f;
     private float nodeHorizDist = 4.5f;
@@ -73,6 +72,23 @@ public class GameController : MonoBehaviour
     }
     public void StartGame(bool restart = false)
     {
+        //Reset all variables
+        gameEnded = false;
+        nodesDict = new Dictionary<int, Node>();
+        playerPiecesList = new List<PlayerPiece>();
+        hiddenPlayerPiece = null;
+        currentPlayerMoves = 0;
+        currentPlayerDidSpecialAction = false;
+        infectedNodeID = -1;
+        currentTurnPlayer = 0;
+        turnCount = 0;
+        hunterSpawn = null;
+        hiddenSpawn = null;
+        hiddenPlayerLocation = -1;
+        hunterPlayerLocations = null;
+        nodeLinksList = new List<NodeLink>();
+        cachedPaths = new Dictionary<(int,int), int[]>();
+
         if(restart){
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
@@ -91,6 +107,14 @@ public class GameController : MonoBehaviour
         {
             this.SetupPlayerPositions(hunterSpawn, hiddenSpawn);
         }
+    }
+    private string trojanWinMessage = "The Trojan successfully evaded detection!";
+    private string scannerWinMessage = "The Trojan has been purged!";
+    public void EndGame(bool hiddenwin)
+    {
+        gameHud.ShowCentreMessage(hiddenwin ? trojanWinMessage : scannerWinMessage);
+        gameHud.ResetPlayerActionButton();
+        gameEnded = true;
     }
     void SetupBoard(bool useFullSetup=true)
     {   
@@ -264,8 +288,7 @@ public class GameController : MonoBehaviour
     {
         if(toScan.nodeID == hiddenPlayerLocation)
         {
-            // END GAME
-
+            EndGame(false);
             return;
         }       
         Node hiddenPlayerNode = Node.getNode(hiddenPlayerLocation);
@@ -340,6 +363,8 @@ public class GameController : MonoBehaviour
     // CLIENTSIDE EVENT HANDLING
     public void OnNodeHovered(Node thisNode)
     {
+        if(gameEnded)
+            return;
         if(localPlayerID == currentTurnPlayer)
         {
             PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
@@ -365,6 +390,8 @@ public class GameController : MonoBehaviour
     }
     public void OnNodeClicked(Node thisNode)
     {
+        if(gameEnded)
+            return;
         if(!gameHud.playerActionButtonDown)
             TryMoveToNode(thisNode.nodeID);
         else

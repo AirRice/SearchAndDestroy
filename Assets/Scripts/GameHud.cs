@@ -10,10 +10,14 @@ public class GameHud : MonoBehaviour
     private Label labelCurPlayer;
     private List<Label> labelsMoveIndicator = new List<Label>();
     private Label labelBottomText;
+    private Label labelCentreText;
+    private Label labelGameoverText;
     private Button buttonEndTurn;
     private Button buttonPlayerAction;
+    private Button buttonRestartGame;
     public bool playerActionButtonDown;
     private bool lastPlayerActionButtonDown;
+    private float lastDisplayedCentreMessage;
     private void OnEnable()
     {
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
@@ -24,23 +28,36 @@ public class GameHud : MonoBehaviour
         labelsMoveIndicator.Add(root.Q<Label>("LabelMove1Image"));
         labelsMoveIndicator.Add(root.Q<Label>("LabelMove2Image"));
         labelsMoveIndicator.Add(root.Q<Label>("LabelMove3Image"));
+        labelGameoverText = overlay.Q<Label>("LabelGameOver");
+        labelCentreText = overlay.Q<Label>("LabelCentre");
         labelBottomText = overlay.Q<Label>("LabelBottomText");
+        buttonRestartGame = overlay.Q<Button>("ButtonRestartGame");
+
         buttonEndTurn.RegisterCallback<ClickEvent>(EndTurnOnClicked);
         buttonPlayerAction.RegisterCallback<ClickEvent>(PlayerActionOnClicked);
+        buttonRestartGame.RegisterCallback<ClickEvent>(RestartOnClicked);
     }
 
     private void EndTurnOnClicked(ClickEvent evt)
     {
+        if (GameController.gameController.gameEnded)
+            return;
         GameController.gameController.ProgressTurn();
     }
     private void PlayerActionOnClicked(ClickEvent evt)
     {
+        if (GameController.gameController.gameEnded)
+            return;
         playerActionButtonDown = !playerActionButtonDown;
-        
     }
     public void ResetPlayerActionButton()
     {
         playerActionButtonDown = false;
+    }
+    private void RestartOnClicked(ClickEvent evt)
+    {
+        if (GameController.gameController.gameEnded)
+            GameController.gameController.StartGame(true);
     }
     // Start is called before the first frame update
     void Start()
@@ -56,6 +73,15 @@ public class GameHud : MonoBehaviour
         int gameCurrentTurnPlayer = GameController.gameController.currentTurnPlayer;
         int gameLocalPlayer = GameController.gameController.localPlayerID;
         int gameCurrentTurnMovesLeft = GameController.gameController.currentPlayerMoves;
+        if(Time.time - lastDisplayedCentreMessage > 5.0f)
+        {
+            labelCentreText.style.visibility = Visibility.Hidden;
+        }
+
+        Visibility endOfGameVis = GameController.gameController.gameEnded ? Visibility.Visible : Visibility.Hidden;
+        labelGameoverText.style.visibility = endOfGameVis;
+        buttonRestartGame.style.visibility = endOfGameVis;
+
         if(lastPlayerActionButtonDown!=playerActionButtonDown)
         {
             lastPlayerActionButtonDown = playerActionButtonDown;
@@ -93,5 +119,11 @@ public class GameHud : MonoBehaviour
         {
             labelsMoveIndicator[i].style.left = i < tospend ? 24 : 0;
         }
-    } 
+    }
+    public void ShowCentreMessage(string msg)
+    {
+        labelCentreText.style.visibility = Visibility.Visible;
+        labelCentreText.text = msg;
+        lastDisplayedCentreMessage = Time.time;
+    }
 }
