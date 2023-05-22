@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions; //for the file handling
 using System;
 using System.Linq;
@@ -19,19 +20,22 @@ public class GameController : MonoBehaviour
     public int localPlayerID = 0;
     public bool hotSeatMode = true;
     public Dictionary<int, Node> nodesDict = new Dictionary<int, Node>();
-    protected List<NodeLink> nodeLinksList = new List<NodeLink>();
-    private Dictionary<(int,int), int[]> cachedPaths = new Dictionary<(int,int), int[]>();
     public List<PlayerPiece> playerPiecesList = new List<PlayerPiece>();
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
-    protected Node hunterSpawn, hiddenSpawn = null;
     public int infectedNodeID = -1;
     //The current turn will be, 0 = hidden player, all further players = i+1 in the hunterPlayerLocations array
     public int currentTurnPlayer = 0;
+    public bool gameEnded = false;
+    public int turnCount = 0;
+    public int maxTurnCount = 0;
+    protected Node hunterSpawn, hiddenSpawn = null;
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
+    protected List<NodeLink> nodeLinksList = new List<NodeLink>();
 
+    private Dictionary<(int,int), int[]> cachedPaths = new Dictionary<(int,int), int[]>();
     private float nodeVertDist = 5f;
     private float nodeHorizDist = 4.5f;
     private void Awake()
@@ -44,22 +48,7 @@ public class GameController : MonoBehaviour
 
         // 
         gameHud = gameObject.GetComponent<GameHud>();
-        this.SetupBoard();
-
-        // Find marked spawns for each team
-        try{
-            GameObject[] hunterSpawns = GameObject.FindGameObjectsWithTag("HunterSpawn");
-            hunterSpawn = hunterSpawns[0].GetComponent<Node> ();
-            GameObject[] hiddenSpawns = GameObject.FindGameObjectsWithTag("HiddenSpawn");
-            hiddenSpawn = hiddenSpawns[0].GetComponent<Node> ();
-        }
-        catch(UnityException uex){
-
-        }
-        if (hunterSpawn != null && hiddenSpawn != null)
-        {
-            this.SetupPlayerPositions(hunterSpawn, hiddenSpawn);
-        }
+        StartGame();
     }
     // Start is called before the first frame update
     void Start()
@@ -81,6 +70,27 @@ public class GameController : MonoBehaviour
     public PlayerPiece GetLocalPlayerPiece()
     {
         return localPlayerID==0 ? hiddenPlayerPiece : playerPiecesList[localPlayerID-1];
+    }
+    public void StartGame(bool restart = false)
+    {
+        if(restart){
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+        this.SetupBoard();
+        // Find marked spawns for each team
+        try{
+            GameObject[] hunterSpawns = GameObject.FindGameObjectsWithTag("HunterSpawn");
+            hunterSpawn = hunterSpawns[0].GetComponent<Node> ();
+            GameObject[] hiddenSpawns = GameObject.FindGameObjectsWithTag("HiddenSpawn");
+            hiddenSpawn = hiddenSpawns[0].GetComponent<Node> ();
+        }
+        catch(UnityException uex){
+            
+        }
+        if (hunterSpawn != null && hiddenSpawn != null)
+        {
+            this.SetupPlayerPositions(hunterSpawn, hiddenSpawn);
+        }
     }
     void SetupBoard(bool useFullSetup=true)
     {   
@@ -213,6 +223,38 @@ public class GameController : MonoBehaviour
             }
         }
     }
+    public void TrySpecialAction(Node thisNode)
+    {
+        if(currentPlayerMoves < 1)
+            return;
+        if (localPlayerID == 0 && currentPlayerDidSpecialAction)
+            return;
+        PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
+        Node playerNode = Node.getNode(toMovePlayerPiece.currentNodeID);
+        bool isAdjacent = false;
+        foreach(NodeLink link in nodeLinksList)
+        {
+            if(link.IsLinkBetween(playerNode.nodeID,thisNode.nodeID))
+            {
+                isAdjacent = true;
+                break;
+            }
+        }
+        if (isAdjacent)
+        {
+            currentPlayerMoves--;
+            if (localPlayerID == 0)
+            {               
+                currentPlayerDidSpecialAction = true;
+                gameHud.playerActionButtonDown = false;
+                TryNodeInfect(thisNode);
+            }
+            else
+            {
+                TryNodeScan(thisNode);
+            }
+        }
+    }
     public void TryNodeInfect(Node toInfect)
     {
         infectedNodeID = toInfect.nodeID;
@@ -220,7 +262,16 @@ public class GameController : MonoBehaviour
     }
     public void TryNodeScan(Node toScan)
     {
+        if(toScan.nodeID == hiddenPlayerLocation)
+        {
+            // END GAME
 
+            return;
+        }       
+        Node hiddenPlayerNode = Node.getNode(hiddenPlayerLocation);
+        int[] pathTo = getCappedPath(toScan,hiddenPlayerNode);
+        int dist = pathTo.Length-1;
+        Debug.Log($"The Distance to the Trojan is {dist} Nodes");
     }
     public void UpdateActivePlayerPosition(int destID)
     {
@@ -318,35 +369,7 @@ public class GameController : MonoBehaviour
             TryMoveToNode(thisNode.nodeID);
         else
         {
-            if(currentPlayerMoves < 1)
-                return;
-            PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
-            Node playerNode = Node.getNode(toMovePlayerPiece.currentNodeID);
-            bool isAdjacent = false;
-            foreach(NodeLink link in nodeLinksList)
-            {
-                if(link.IsLinkBetween(playerNode.nodeID,thisNode.nodeID))
-                {
-                    isAdjacent = true;
-                    break;
-                }
-            }
-            if (isAdjacent)
-            {
-                currentPlayerMoves--;
-                if (localPlayerID == 0)
-                {               
-                    if(currentPlayerDidSpecialAction)
-                        return;
-                    currentPlayerDidSpecialAction = true;
-                    gameHud.playerActionButtonDown = false;
-                    TryNodeInfect(thisNode);
-                }
-                else
-                {
-                    TryNodeScan(thisNode);
-                }
-            }
+            TrySpecialAction(thisNode);
         }
     }
     // SEARCHING and CACHING
@@ -360,7 +383,7 @@ public class GameController : MonoBehaviour
         }
     }
     
-    public int[] getCappedPath(Node startPoint, Node endPoint, int maxhops)
+    public int[] getCappedPath(Node startPoint, Node endPoint, int maxhops = -1)
     {
         int[] foundPathRaw;
         if(!cachedPaths.TryGetValue((startPoint.nodeID, endPoint.nodeID), out foundPathRaw))
@@ -368,10 +391,10 @@ public class GameController : MonoBehaviour
             foundPathRaw = this.searchPath(startPoint,endPoint);
             cachedPaths.Add((startPoint.nodeID,endPoint.nodeID),foundPathRaw);
         }
-        if(foundPathRaw.Length > maxhops+1)
-            return foundPathRaw.Take(maxhops+1).ToArray();
-        else   
+        if(maxhops == -1 || foundPathRaw.Length <= maxhops+1)
             return foundPathRaw;
+        else   
+            return foundPathRaw.Take(maxhops+1).ToArray();
     }
 
     public int[] searchPath(Node startPoint, Node endPoint)
