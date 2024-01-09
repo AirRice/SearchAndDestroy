@@ -499,7 +499,7 @@ public class GameController : MonoBehaviour
         nodeWasInfectedLastTurn = true;
         infectedNodeIDs.Add(toInfect.nodeID);
         toInfect.Infect();
-        if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.Any(node=> infectedNodeIDs.Contains(node)))
+        if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
         }
