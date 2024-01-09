@@ -35,8 +35,8 @@ public class GameController : MonoBehaviour
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
-    public int infectedNodeID;
-    // the Target node(s) to which the hiding player must go and infect at least once.
+    public List<int> infectedNodeIDs;
+    // the Target node(s) to which the hiding player must go and infect.
     public List<int> targetNodeIDs;
     //The current turn will be, 0 = hidden player, all further players = i+1 in the hunterPlayerLocations array
     public int currentTurnPlayer = 0;
@@ -52,7 +52,7 @@ public class GameController : MonoBehaviour
     public List<(int,int)> scanHistory;
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
-
+    private bool nodeWasInfectedLastTurn = false;
     private void Awake()
     {
         //enforce singleton
@@ -112,7 +112,7 @@ public class GameController : MonoBehaviour
         hiddenPlayerPiece = null;
         currentPlayerMoves = 0;
         currentPlayerDidSpecialAction = false;
-        infectedNodeID = -1;
+        infectedNodeIDs = new List<int>();
         currentTurnPlayer = 0;
         turnCount = 0;
         hunterSpawn = null;
@@ -122,6 +122,7 @@ public class GameController : MonoBehaviour
         nodeLinksList = new List<NodeLink>();
         targetNodeIDs = new List<int>();
         cachedPaths = new Dictionary<(int,int), int[]>();
+        nodeWasInfectedLastTurn = false;
 
         if(restart){
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
@@ -408,7 +409,7 @@ public class GameController : MonoBehaviour
     {
         if(currentPlayerMoves < 1)
             return;
-        if(toMoveTo == infectedNodeID && localPlayerID != 0)
+        if(infectedNodeIDs.Contains(toMoveTo)  && localPlayerID != 0)
         {
             return;    
         }
@@ -495,8 +496,14 @@ public class GameController : MonoBehaviour
     //Infect the specified node. (Trojan Player only)
     public void TryNodeInfect(Node toInfect)
     {
-        infectedNodeID = toInfect.nodeID;
+        nodeWasInfectedLastTurn = true;
+        infectedNodeIDs.Add(toInfect.nodeID);
         toInfect.Infect();
+        if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.Any(node=> infectedNodeIDs.Contains(node)))
+        {
+            EndGame(true);
+        }
+
     }
 
     //Scan the specified node and receive the distance (Scanner Players)
@@ -585,8 +592,14 @@ public class GameController : MonoBehaviour
         gameHud.ResetPlayerActionButton();
         currentPlayerMoves = movesCount;
         currentPlayerDidSpecialAction = false;
-        if(infectedNodeID!=-1)
+        
+        // If flag is marked then re-cache the paths, they'll be inaccurate now.
+        if(nodeWasInfectedLastTurn)
+        {
             cachedPaths = new Dictionary<(int,int), int[]>();
+            nodeWasInfectedLastTurn = false;
+        }
+
         // Only handle hidden player if one *IS* the hidden player
         if(currentTurnPlayer==0)
         {
@@ -609,13 +622,14 @@ public class GameController : MonoBehaviour
     void StartHiddenTurn()
     {
         scanHistory = new List<(int,int)>();
-        infectedNodeID = -1;
         foreach(KeyValuePair<int,Node> nodePair in nodesDict)
         {
             // Reset node infected state when the hidden player's turn activates
-            if(nodePair.Value.IsInfected())
+            // However objectives stay infected.
+            if(nodePair.Value.IsInfected() && !nodePair.Value.isTarget)
             {
                 nodePair.Value.DeInfect();
+                infectedNodeIDs.Remove(nodePair.Value.nodeID);
             }
         }
         if(this.localPlayerID==0 && hiddenPlayerPiece == null)
@@ -771,7 +785,7 @@ public class GameController : MonoBehaviour
             foreach(NodeLink link in nodeLinksList)
             {
                 int? otherNode = link.getOtherNode(vpath.Item1);
-                if(otherNode.HasValue && otherNode.Value == infectedNodeID && localPlayerID != 0)
+                if(otherNode.HasValue && infectedNodeIDs.Contains(otherNode.Value) && localPlayerID != 0)
                     continue;
                 if(otherNode == endPointID)
                     return vpath.Item2.Concat(new int[] {endPointID}).ToArray();
