@@ -267,11 +267,24 @@ public class GameController : MonoBehaviour
             }
         }
         double d_mapSize = mapSize;
-        int randomChosenTarget = Random.Range(2, (int)Math.Floor(d_mapSize*d_mapSize/2));
-        AddTargetNodeID(randomChosenTarget);
+        for(int i=0;i<maxObjectives;i++)
+        {
+            bool chosen = false;
+            int randomChosenTarget = -1;
+            while (!chosen)
+            {
+                randomChosenTarget = Random.Range(2, (int)Math.Floor(d_mapSize*d_mapSize/2));
+                if (!targetNodeIDs.Contains(randomChosenTarget) && !IsAdjacentToTargetNodes(randomChosenTarget))
+                {
+                    chosen = true;
+                }
+            }
+            
+            AddTargetNodeID(randomChosenTarget);
 
-        int oppositeChosenTarget = mapSize*mapSize-(randomChosenTarget-1);
-        AddTargetNodeID(oppositeChosenTarget);
+            int oppositeChosenTarget = mapSize*mapSize-(randomChosenTarget-1);
+            AddTargetNodeID(oppositeChosenTarget);
+        }
         mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
     }
 
@@ -282,6 +295,20 @@ public class GameController : MonoBehaviour
         toTarget.ForceMakeTarget();
     }
 
+    private bool IsAdjacentToTargetNodes(int nodeID)
+    {
+        foreach (int otherNodeID in targetNodeIDs)
+        {
+            foreach(NodeLink link in nodeLinksList)
+            {
+                if (link.IsLinkBetween(nodeID,otherNodeID))
+                {
+                    return true;
+                }
+            } 
+        }
+        return false;
+    }
 
     [Obsolete("SetupBoard_legacy uses an older numbering scheme. Use the non-legacy version")]
     void SetupBoard_legacy()
@@ -351,8 +378,6 @@ public class GameController : MonoBehaviour
             Node toTarget = Node.GetNode(nodeID);
             toTarget.isTarget = true;
             toTarget.ForceMakeTarget();
-            
-            
         }
         mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
     }
