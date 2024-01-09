@@ -530,7 +530,11 @@ public class GameController : MonoBehaviour
         Vector3 offset = new(0,0.55f,0);
         List<int> closestNodes = new();
         int[] adjs = GetAdjacentNodes(toTrack.nodeID);
-        Node hiddenPlayerNode = Node.GetNode(hiddenPlayerLocation);
+        if(toTrack.nodeID == hiddenPlayerLocation)
+        {
+            EndGame(false);
+            return;
+        }      
         int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
         int minDist = adjsDist.Min();
         // use the arrow dirs predefined strings.. IF they even are valid
