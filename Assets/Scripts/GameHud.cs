@@ -11,6 +11,7 @@ public class GameHud : MonoBehaviour
     private List<Label> labelsMoveIndicator = new List<Label>();
     private Label labelBottomText;
     private Label labelCentreText;
+    private Label labelTurnCounter;
     private Label labelGameoverText;
     private Button buttonEndTurn;
     private Button buttonPlayerAction;
@@ -23,6 +24,7 @@ public class GameHud : MonoBehaviour
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
         VisualElement overlay = root.Q<VisualElement>("Overlay");
         labelCurPlayer = root.Q<Label>("LabelCurPlayer");
+        labelTurnCounter = root.Q<Label>("LabelTurnCounter");
         buttonEndTurn = root.Q<Button>("ButtonEndTurn");
         buttonPlayerAction = root.Q<Button>("ButtonPlayerAction");
         labelsMoveIndicator.Add(root.Q<Label>("LabelMove1Image"));
@@ -40,14 +42,20 @@ public class GameHud : MonoBehaviour
 
     private void EndTurnOnClicked(ClickEvent evt)
     {
-        if (GameController.gameController.gameEnded)
-            return;
         GameController.gameController.ProgressTurn();
     }
     private void PlayerActionOnClicked(ClickEvent evt)
     {
-        if (GameController.gameController.gameEnded)
+        int gameCurrentTurnPlayer = GameController.gameController.currentTurnPlayer;
+        int gameLocalPlayer = GameController.gameController.localPlayerID;
+        if (GameController.gameController.gameEnded || GameController.gameController.currentPlayerMoves < 1)
             return;
+        // Testing for "track" type action
+        if (gameCurrentTurnPlayer != 0 && gameLocalPlayer == gameCurrentTurnPlayer)
+        {
+            GameController.gameController.TrySpecialAction(Node.GetNode(GameController.gameController.GetActivePlayerPosition()));
+            return;
+        }
         playerActionButtonDown = !playerActionButtonDown;
     }
     public void ResetPlayerActionButton()
@@ -66,8 +74,8 @@ public class GameHud : MonoBehaviour
     }
 
     // Update is called once per frame
-    private string infectNodeDesc = "Infect an adjacent node on the map for the following turn. Infected nodes are not traversable by Scanner players.";
-    private string scanNodeDesc = "Scan an adjacent node on the map and discover the distance to the Trojan player from the scan point.";
+    private readonly string infectNodeDesc = "Infect an adjacent node on the map for the following turn. Infected nodes are not traversable by Scanner players.";
+    private readonly string scanNodeDesc = "Scan an adjacent node on the map and discover the distance to the Trojan player from the scan point.";
     void Update()
     {
         int gameCurrentTurnPlayer = GameController.gameController.currentTurnPlayer;
@@ -94,6 +102,7 @@ public class GameHud : MonoBehaviour
             lastActivePlayer = gameCurrentTurnPlayer;
             labelCurPlayer.text = "Current Player: "+ (gameCurrentTurnPlayer == 0 ? "The Trojan" : $"Scanner {gameCurrentTurnPlayer}");
             buttonPlayerAction.text = gameCurrentTurnPlayer == 0 ? "Infect Node" : "Scan"; 
+            labelTurnCounter.text = "Turn: "+ (1+Mathf.FloorToInt(GameController.gameController.turnCount / GameController.gameController.playersCount));
             foreach(Label moveIndicator in labelsMoveIndicator)
             {
                 moveIndicator.visible = (gameCurrentTurnPlayer==gameLocalPlayer);
@@ -104,10 +113,13 @@ public class GameHud : MonoBehaviour
             if(lastPlayerTurns!=gameCurrentTurnMovesLeft)
             {
                 lastPlayerTurns = gameCurrentTurnMovesLeft;
+
                 for(int i=0; i<GameController.gameController.movesCount; i++)
                 {
-                    labelsMoveIndicator[i].style.unityBackgroundImageTintColor = gameCurrentTurnMovesLeft < GameController.gameController.movesCount && i < (GameController.gameController.movesCount-gameCurrentTurnMovesLeft) ? Color.gray : Color.white;
+                    Color labelcolor = gameCurrentTurnMovesLeft < GameController.gameController.movesCount && i < (GameController.gameController.movesCount-gameCurrentTurnMovesLeft) ? Color.gray : Color.white;
+                    labelsMoveIndicator[i].style.unityBackgroundImageTintColor = labelcolor;
                 }
+                buttonPlayerAction.style.backgroundColor = (gameCurrentTurnMovesLeft < 1) ? Color.gray : Color.white;
             }       
         }
     }

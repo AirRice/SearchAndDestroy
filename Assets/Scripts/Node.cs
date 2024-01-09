@@ -15,17 +15,21 @@ public class Node : MonoBehaviour
     public Material infectedMat;
     public Material infectedSelectedMat;
     public Material selectedMat;
-    public static Node getNode(int id)
+    public Material targetMat;
+    public Material targetClaimedMat;
+    private int lastActivePlayer;
+    public bool isTarget;
+    private bool currentPlayerIsHidden;
+    public static Node GetNode(int id)
     {
-        Node nodeObject;
-        if (GameController.gameController.nodesDict.TryGetValue(id, out nodeObject))
+        if (GameController.gameController.nodesDict.TryGetValue(id, out Node nodeObject))
             return nodeObject;
         else
             return null;
     }
-    public static GameObject getNodeObject(int id)
+    public static GameObject GetNodeObject(int id)
     {
-        Node nodeObject = Node.getNode(id);
+        Node nodeObject = Node.GetNode(id);
         if(nodeObject!=null)
             return nodeObject.gameObject;
         else
@@ -52,7 +56,19 @@ public class Node : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        int currentTurnPlayer = GameController.gameController.currentTurnPlayer;
+        if (lastActivePlayer != currentTurnPlayer)
+        {
+            lastActivePlayer = currentTurnPlayer;
+            currentPlayerIsHidden = (lastActivePlayer == 0);
+        }
+    }
+
+    public void ForceMakeTarget(bool b = true)
+    {
+        LineRenderer line = gameObject.GetComponent<LineRenderer>();
+        isTarget = b;
+        line.enabled = (GameController.gameController.localPlayerID == 0);
     }
     private bool lastMouseOverState = false;
     void OnMouseOver()
@@ -93,14 +109,24 @@ public class Node : MonoBehaviour
 
     public void DeInfect()
     {
+        LineRenderer line = gameObject.GetComponent<LineRenderer>();
         isInfected = false;
         gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? selectedMat : unselectedMat;
+        if (isTarget)
+        {
+            //line.material = targetMat;
+        }
     }
 
     public void Infect()
     {
+        LineRenderer line = gameObject.GetComponent<LineRenderer>();
         isInfected = true;
         gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? infectedSelectedMat : infectedMat;
+        if (isTarget)
+        {
+            line.material = targetClaimedMat;
+        }
     }
 
     public bool IsInfected()

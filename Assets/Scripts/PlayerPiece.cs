@@ -40,7 +40,7 @@ public class PlayerPiece : MonoBehaviour
         if (nodeid != currentNodeID)
         {
             currentNodeID = nodeid;
-            GameObject nodeObject = Node.getNodeObject(nodeid);
+            GameObject nodeObject = Node.GetNodeObject(nodeid);
             if (nodeObject != null)
             {
                 if (!nomove)
@@ -55,7 +55,7 @@ public class PlayerPiece : MonoBehaviour
             return; 
         int remainingMoves = GameController.gameController.currentPlayerMoves;
         IEnumerator _previousMove = this.previousMove;
-        previousMove = MoveToPosition(_previousMove, Node.getNodeObject(currentNodeID).transform.position + this.offset, pathToHovered, this.currentNodeID, toMoveTo, 0.65f);
+        previousMove = MoveToPosition(_previousMove, Node.GetNodeObject(currentNodeID).transform.position + this.offset, pathToHovered, this.currentNodeID, toMoveTo, 0.65f);
         StartCoroutine(previousMove);
         //Debug.Log("Moving");
     }
@@ -74,7 +74,7 @@ public class PlayerPiece : MonoBehaviour
                 continue;
             else
             {
-                GameObject nodeObject = Node.getNodeObject(destID);
+                GameObject nodeObject = Node.GetNodeObject(destID);
                 destPos = nodeObject.transform.position + this.offset;
 
                 float t = 0f;

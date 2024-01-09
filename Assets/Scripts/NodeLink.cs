@@ -13,10 +13,14 @@ public class NodeLink
     {
         nodeA = a;
         nodeB = b;
-        Node nodeAInstance = Node.getNode(nodeA);
-        Node nodeBInstance = Node.getNode(nodeB);
+        Node nodeAInstance = Node.GetNode(nodeA);
+        Node nodeBInstance = Node.GetNode(nodeB);
         if (nodeAInstance != null && nodeBInstance != null)
             nodeAInstance.AddOtherNode(nodeBInstance);
+    }
+    public bool ConnectsToNode(int nodeID)
+    {
+        return (nodeA == nodeID || nodeB == nodeID); 
     }
     
     public override string ToString()
