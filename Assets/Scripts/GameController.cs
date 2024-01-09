@@ -499,15 +499,17 @@ public class GameController : MonoBehaviour
         List<int> closestNodes = new();
         int[] adjs = GetAdjacentNodes(toTrack.nodeID);
         Node hiddenPlayerNode = Node.GetNode(hiddenPlayerLocation);
-        int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation) * 2).ToArray();
+        int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
         int minDist = adjsDist.Min();
+        // use the arrow dirs predefined strings.. IF they even are valid
+        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => GetAdjacentNodesExist(toTrack.nodeID)[index]).ToArray();
         for(int i = 0; i<adjs.Length; i++){
             if(adjsDist[i] == minDist)
             {
                 closestNodes.Add(adjs[i]);
                 DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
                 textPopup.transform.position = transform.position = Node.GetNode(adjs[i]).transform.position + offset;
-                textPopup.SetText(arrowDirs[i], mainCam);
+                textPopup.SetText(arrowDirsFiltered[i], mainCam);
             }
         }
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
@@ -661,6 +663,16 @@ public class GameController : MonoBehaviour
     are of value 1+(mapsize * n) where n is an int 0 <= n
     are of value mapsize * n where n is an int 1 <= n
     */
+    public bool[] GetAdjacentNodesExist (int nodeID)
+    {
+        bool[] tests = {
+            (nodeID - mapSize > 0), 
+            (nodeID - 1 > 0), 
+            (nodeID + mapSize <= mapSize*mapSize), 
+            (nodeID + 1 <= mapSize*mapSize)
+        };
+        return tests;
+    }
     public int[] GetAdjacentNodes (int nodeID)
     {
         List<int> connectedNodes = new();
