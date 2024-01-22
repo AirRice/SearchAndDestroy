@@ -60,21 +60,6 @@ public class GameController : MonoBehaviour
             gameController = this;
         else
             Destroy(gameObject);
-        ConfigData cfg = new ConfigData
-        {
-            mapSize = mapSize,
-            playersCount = playersCount,
-            movesCount = movesCount,
-            maxTurnCount = maxTurnCount,
-            maxRoundCount = maxRoundCount,
-            maxObjectives = maxObjectives,
-            hotSeatMode = hotSeatMode,
-            logToCSV = logToCSV,
-            useSmoothMove = useSmoothMove
-        };
-        string data = JsonUtility.ToJson(cfg);
-        string filePath = System.IO.Path.Combine(Application.dataPath, "config.json");
-        System.IO.File.WriteAllText(filePath, data);
     }
 
     // Start is called before the first frame update
@@ -82,6 +67,18 @@ public class GameController : MonoBehaviour
     {   
         gameHud = gameObject.GetComponent<GameHud>();
         ConfigData cfg = LoadData.Load();
+
+        mapSize = cfg.mapSize;
+        playersCount = cfg.playersCount;
+        movesCount = cfg.movesCount;
+        maxTurnCount = cfg.maxTurnCount;
+        maxRoundCount = cfg.maxRoundCount;
+        maxObjectives = cfg.maxObjectives;
+        hotSeatMode = cfg.hotSeatMode;
+        logToCSV = cfg.logToCSV;
+        useSmoothMove = cfg.useSmoothMove;
+
+
         String[] fileLines = Regex.Split ( playerBotTypesData.text, "\n|\r|\r\n" );
         playerBotType = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
 
