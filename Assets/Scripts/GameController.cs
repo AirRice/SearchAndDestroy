@@ -21,14 +21,14 @@ public class GameController : MonoBehaviour
     public int roundCount = 0;
     public int maxRoundCount = 10;
     public int maxObjectives = 1;
+    public bool hotSeatMode = true;
+    public bool logToCSV = true;
+    public bool useSmoothMove = false;
     public PlayerPiece playerPrefab;
     public Node nodePrefab;
     public DistanceTextPopup textPopupPrefab;
     public Camera mainCam;
     public int localPlayerID = 0;
-    public bool hotSeatMode = true;
-    public bool logToCSV = true;
-    public bool useSmoothMove = false;
     private bool noBotPlayers = true;
     public Dictionary<int, Node> nodesDict = new();
     public List<PlayerPiece> playerPiecesList = new();
@@ -60,12 +60,28 @@ public class GameController : MonoBehaviour
             gameController = this;
         else
             Destroy(gameObject);
+        ConfigData cfg = new ConfigData
+        {
+            mapSize = mapSize,
+            playersCount = playersCount,
+            movesCount = movesCount,
+            maxTurnCount = maxTurnCount,
+            maxRoundCount = maxRoundCount,
+            maxObjectives = maxObjectives,
+            hotSeatMode = hotSeatMode,
+            logToCSV = logToCSV,
+            useSmoothMove = useSmoothMove
+        };
+        string data = JsonUtility.ToJson(cfg);
+        string filePath = System.IO.Path.Combine(Application.dataPath, "config.json");
+        System.IO.File.WriteAllText(filePath, data);
     }
 
     // Start is called before the first frame update
     void Start()
     {   
         gameHud = gameObject.GetComponent<GameHud>();
+        ConfigData cfg = LoadData.Load();
         String[] fileLines = Regex.Split ( playerBotTypesData.text, "\n|\r|\r\n" );
         playerBotType = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
 
