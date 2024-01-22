@@ -155,26 +155,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerBotTypesData: {fileID: 4900000, guid: 91780a0d96f06b043b65d49460da5bdd, type: 3}
-  mapSize: 14
+  mapSize: 5
   playersCount: 3
   movesCount: 3
   maxTurnCount: 30
   roundCount: 0
   maxRoundCount: 1000
-  maxObjectives: 1
+  maxObjectives: 3
   playerPrefab: {fileID: 890269969164875875, guid: ac7ed008763f8ff4facf279b9737043a, type: 3}
   nodePrefab: {fileID: 7516172660082148511, guid: 08444620d4235134ab98623f6dc1f49c, type: 3}
   textPopupPrefab: {fileID: 2137901176250374956, guid: a8c1d198f8e681348955b56bd2d34a0a, type: 3}
   mainCam: {fileID: 963194227}
   localPlayerID: 0
   hotSeatMode: 1
-  logToCSV: 1
-  useSmoothMove: 0
+  logToCSV: 0
+  useSmoothMove: 1
   playerPiecesList: []
   hiddenPlayerPiece: {fileID: 0}
   currentPlayerMoves: 0
   currentPlayerDidSpecialAction: 0
-  infectedNodeID: -1
+  infectedNodeIDs: 
   targetNodeIDs: 
   currentTurnPlayer: 0
   playerBotType:
@@ -376,6 +376,7 @@ GameObject:
   - component: {fileID: 963194228}
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
+  - component: {fileID: 963194229}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -449,6 +450,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: -90}
+--- !u!114 &963194229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 810a0d6f356591e47a043652f940592e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 15
+  edgesize: 10
+  scrollSensitivity: 0.5
+  verticalInput: 0
+  horizontalInput: 0
+  defaultPos: {x: 0, y: 0, z: 0}
+  defaultCamHei: 0
 --- !u!1 &1009926978
 GameObject:
   m_ObjectHideFlags: 0
