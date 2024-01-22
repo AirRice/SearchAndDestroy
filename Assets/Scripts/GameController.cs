@@ -87,7 +87,8 @@ public class GameController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if(Input.GetKeyDown(KeyCode.Escape))
+        Quit();
     }
     //Get PlayerPiece object relating to current player
     public PlayerPiece GetCurrentPlayerPiece()
