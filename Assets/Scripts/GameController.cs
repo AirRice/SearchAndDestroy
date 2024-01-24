@@ -35,6 +35,7 @@ public class GameController : MonoBehaviour
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
+    public int lastInfectedNode;
     public List<int> infectedNodeIDs;
     // the Target node(s) to which the hiding player must go and infect.
     public List<int> targetNodeIDs;
@@ -125,6 +126,7 @@ public class GameController : MonoBehaviour
         playerPiecesList = new List<PlayerPiece>();
         hiddenPlayerPiece = null;
         currentPlayerMoves = 0;
+        lastInfectedNode = -1;
         currentPlayerDidSpecialAction = false;
         infectedNodeIDs = new List<int>();
         currentTurnPlayer = 0;
@@ -511,6 +513,7 @@ public class GameController : MonoBehaviour
     public void TryNodeInfect(Node toInfect)
     {
         nodeWasInfectedLastTurn = true;
+        lastInfectedNode = toInfect.nodeID;
         infectedNodeIDs.Add(toInfect.nodeID);
         toInfect.Infect();
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
@@ -639,6 +642,7 @@ public class GameController : MonoBehaviour
 
     void StartHiddenTurn()
     {
+        lastInfectedNode = -1;
         scanHistory = new List<(int,int)>();
         foreach(KeyValuePair<int,Node> nodePair in nodesDict)
         {

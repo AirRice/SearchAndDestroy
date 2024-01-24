@@ -17,7 +17,7 @@ public class SoloScan : BotTemplate
         List<int> possibleLocations = new List<int>();
         /**
         This algorithm works in the following order.
-        1. If no previous scan information for this turn exists, scan to gain some information.
+        1. If no previous scan information/newly infected nodes exist for this turn, scan to gain some information.
         2. Using the info, locate a potential location the hidden player could be in at the current moment. Triangulate possible locations from all known info that turn.
         3. Head to the location and scan the node, if it is possible to do so (if it is within range)
         4. If the scanning has not resulted in a scanner victory, move to a random adjacent node and repeat.
