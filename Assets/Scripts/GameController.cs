@@ -598,6 +598,11 @@ public class GameController : MonoBehaviour
     {
         if(gameEnded)
             return;
+        if(infectedNodeIDs.Contains(GetActivePlayerPosition()))
+        // Don't let them end the turn if they're on an infected node: stop stalling
+        {
+            return;    
+        }
         if(increment)
         {
             turnCount++;
@@ -609,7 +614,7 @@ public class GameController : MonoBehaviour
             }
             if(GetTurnNumber()>maxTurnCount)
             {
-                EndGame(true);
+                EndGame(false);
             }
         }
         gameHud.ResetPlayerActionButton();
@@ -637,7 +642,7 @@ public class GameController : MonoBehaviour
         {
             Debug.Log("handle automatic turn");
             //Handle automatic turn
-            int currentPlayerNode = currentTurnPlayer==0 ? hiddenPlayerLocation : hunterPlayerLocations[currentTurnPlayer-1];
+            int currentPlayerNode = GetActivePlayerPosition();
             playerBotControllers[currentTurnPlayer].ProcessTurn(currentTurnPlayer, currentPlayerNode, currentPlayerMoves);
         }
     }
