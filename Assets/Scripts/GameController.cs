@@ -423,21 +423,23 @@ public class GameController : MonoBehaviour
     // Move a player to a node, expending moves as required. Automatically logs movement & prunes movement path based on remaining 
     public void TryMoveToNode(int toMoveTo)
     {
-        if(currentPlayerMoves < 1)
-            return;
-        if(infectedNodeIDs.Contains(toMoveTo)  && localPlayerID != 0)
-        {
-            return;    
-        }
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
+        int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
+        if(movePath.Length <= 0)
+        {
+            return;
+        }
+        currentPlayerMoves -= (movePath.Length-1);
+        toMoveTo = movePath.Last();
         if(toMoveTo==toMovePlayerPiece.currentNodeID)
         {
             return;
         }
-        
-        int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
-        currentPlayerMoves -= (movePath.Length-1);
-        toMoveTo = movePath.Last();
+        if(infectedNodeIDs.Contains(toMoveTo))
+        {
+            if (localPlayerID != 0 || currentPlayerMoves <= 1)
+            return;    
+        }        
         //Debug.Log(currentPlayerMoves);
         if(logToCSV)
         {
@@ -737,18 +739,8 @@ public class GameController : MonoBehaviour
     public int[] GetAdjacentNodes (int nodeID)
     {
         List<int> connectedNodes = new();
-
-        if (nodeID - mapSize > 0)
-            connectedNodes.Add(nodeID - mapSize);
-
-        if (nodeID - 1 > 0)
-            connectedNodes.Add(nodeID - 1);
-
-        if (nodeID + mapSize <= mapSize*mapSize)
-            connectedNodes.Add(nodeID + mapSize);
-
-        if (nodeID + 1 <= mapSize*mapSize)
-            connectedNodes.Add(nodeID + 1);
+        int[] adjNodesRaw = {nodeID - mapSize, nodeID - 1, nodeID + mapSize, nodeID + 1}
+        int[] adjNodes = adjNodesRaw.Where((str, index) => GetAdjacentNodesExist(nodeID)[index]).ToArray();
 
         /*foreach(NodeLink link in nodeLinksList)
         {
@@ -761,8 +753,8 @@ public class GameController : MonoBehaviour
                 }
             }
         }*/
-        Debug.Log(string.Join(", ", connectedNodes.ToArray()));
-        return connectedNodes.ToArray();
+        Debug.Log(string.Join(", ", adjNodes));
+        return adjNodes;
     }
 
     public void HighlightAllPaths(bool highlighted = true)
