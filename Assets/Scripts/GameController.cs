@@ -50,7 +50,7 @@ public class GameController : MonoBehaviour
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
     public List<NodeLink> nodeLinksList = new();
-    public List<(int,int)> scanHistory;
+    public List<(int,int[])> scanHistory;
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
@@ -469,7 +469,7 @@ public class GameController : MonoBehaviour
             }
         }
     }
-    public void TrySpecialAction(Node thisNode)
+    public void TrySpecialAction(Node thisNode = null)
     {
         if(currentPlayerMoves < 1)
             return;
@@ -477,6 +477,10 @@ public class GameController : MonoBehaviour
             return;
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
         Node playerNode = Node.GetNode(toMovePlayerPiece.currentNodeID);
+        if(thisNode == null)
+        {
+            thisNode = playerNode
+        }
         if (currentTurnPlayer == 0)
         {
             bool isAdjacent = false;
@@ -526,7 +530,7 @@ public class GameController : MonoBehaviour
     }
 
     //Scan the specified node and receive the distance (Scanner Players)
-    public void TryNodeScan(Node toScan)
+    /*public void TryNodeScan(Node toScan)
     {
         Vector3 offset = new(0,0.55f,0);
 
@@ -542,7 +546,8 @@ public class GameController : MonoBehaviour
             EndGame(false);
             return;
         }       
-    }
+    }*/
+
     private readonly string[] arrowDirs = {"<-","<-","->","->"};
     public void TryNodeTrack(Node toTrack)
     {
@@ -556,6 +561,7 @@ public class GameController : MonoBehaviour
         }      
         int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
         int minDist = adjsDist.Min();
+        
         // use the arrow dirs predefined strings.. IF they even are valid
         string[] arrowDirsFiltered = arrowDirs.Where((str, index) => GetAdjacentNodesExist(toTrack.nodeID)[index]).ToArray();
         for(int i = 0; i<adjs.Length; i++){
@@ -567,6 +573,7 @@ public class GameController : MonoBehaviour
                 textPopup.SetText(arrowDirsFiltered[i], mainCam);
             }
         }
+        scanHistory.Add((toTrack.nodeID, closestNodes.ToArray());
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
     //
@@ -650,7 +657,7 @@ public class GameController : MonoBehaviour
     void StartHiddenTurn()
     {
         lastInfectedNode = -1;
-        scanHistory = new List<(int,int)>();
+        scanHistory = new List<(int,int[])>();
         foreach(KeyValuePair<int,Node> nodePair in nodesDict)
         {
             // Reset node infected state when the hidden player's turn activates

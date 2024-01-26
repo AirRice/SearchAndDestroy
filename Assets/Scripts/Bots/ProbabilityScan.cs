@@ -8,6 +8,7 @@ public class ProbabilityScan : BotTemplate
         
     public override void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
     {
+        GameController gcr = GameController.gameController;
         Debug.Log($"Processing turn for player {playerID}");
         if(playerID == 0)
         {
@@ -20,35 +21,28 @@ public class ProbabilityScan : BotTemplate
         /**
         This algorithm works in the following order.
         1. If no previous scan information/newly infected nodes exist for this turn, scan to gain some information.
-        2. Using the info, locate a potential location the hidden player could be in at the current moment. Triangulate possible locations from all known info that turn.
-        3. Head to the location and scan the node, if it is possible to do so (if it is within range)
-        4. If the scanning has not resulted in a scanner victory, move to a random adjacent node and repeat.
-        5. Do this until the action allocation runs out.
+        2. Using the info, locate all potential locations the hidden player could be in at the current moment. Triangulate possible locations from all known info that turn.
+        3. Recursively calculate the probability that it is there at that exact node.
+        4. Head to the location and scan the node, if it is possible to do so (if it is within range)
+        5. If the scanning has not resulted in a scanner victory, move to a random adjacent node and repeat.
+        6. Do this until the action allocation runs out.
         **/
 
         while(actionsLeft > 0)
         {
             int scanTarget = -1;
-            List<(int,int)> prevScans = GameController.gameController.scanHistory;
-
+            List<(int,int[])> prevScans = gcr.scanHistory;
+            int lastInfected = gcr.lastInfectedNode;
             // If no previous scan info exists for the turn, do one just for some information
-            if (prevScans.Count == 0)
+            if (prevScans.Count == 0 || lastInfected > gcr.mapSize * gcr.mapSize || lastInfected < 0 )
             {
-                int scanTargetFirst = SelectNextNodeRandom(currentLocation);
-                GameController.gameController.TrySpecialAction(Node.GetNode(scanTargetFirst));
-                Debug.Log($"Scanning node id {scanTargetFirst} as first action");
+                GameController.gameController.TrySpecialAction();
+                Debug.Log($"Scanning as first action");
                 actionsLeft--;
             }
             else
             {
-                //Make this list for the first time if it doesn't exist yet.
-                if (possibleLocations.Count == 0)
-                {
-                    for(int i = 1; i <= GameController.gameController.mapSize * GameController.gameController.mapSize; i++)
-                    {
-                        possibleLocations.Add(i);
-                    }
-                }
+
                 // Check if every known ground truth fits for the given node
                 // I.e. check if the node being looked at fulfills all requirements
                 // Iterate over this in reverse so it can properly be removed.
@@ -58,7 +52,7 @@ public class ProbabilityScan : BotTemplate
                     foreach ((int,int) info in prevScans)
                     {
                         Debug.Log($"Previous scan info: Node {info.Item1} is distance {info.Item2} away from hidden player, testing node {possibleLocations[i]}");
-                        if (GameController.gameController.GetPathLength(info.Item1,possibleLocations[i]) == info.Item2)
+                        if (gcr.GetPathLength(info.Item1,possibleLocations[i]) == info.Item2)
                             truths++;
                     }
                     if (truths != prevScans.Count)
@@ -73,7 +67,7 @@ public class ProbabilityScan : BotTemplate
                     //use random iteration to decide on a potential target.
                     int rand_index = Random.Range(0, possibleLocations_temp.Count);
                     int potential_target = possibleLocations_temp[rand_index];
-                    if((GameController.gameController.GetPathLength(currentLocation,potential_target) < actionsLeft)
+                    if((gcr.GetPathLength(currentLocation,potential_target) < actionsLeft)
                         || (currentLocation == potential_target && actionsLeft >= 2))
                     {
                         scanTarget = potential_target;
@@ -94,23 +88,23 @@ public class ProbabilityScan : BotTemplate
                         int toMoveTo = SelectNextNodeRandom(currentLocation);
                         Debug.Log($"Moving to node id {toMoveTo}");
         
-                        GameController.gameController.TryMoveToNode(toMoveTo);
+                        gcr.TryMoveToNode(toMoveTo);
                         currentLocation = toMoveTo;
                         actionsLeft--;
                     }
                     else
                     {
-                        int movedist = GameController.gameController.GetPathLength(currentLocation,scanTarget);
-                        int[] toPrevNode = GameController.gameController.GetCappedPath(currentLocation,scanTarget,movedist-1);
+                        int movedist = gcr.GetPathLength(currentLocation,scanTarget);
+                        int[] toPrevNode = gcr.GetCappedPath(currentLocation,scanTarget,movedist-1);
                         int prevNode = toPrevNode[^1];
                         Debug.Log($"Scan target {scanTarget}, Previous node {prevNode}");
                         
-                        GameController.gameController.TryMoveToNode(prevNode);
+                        gcr.TryMoveToNode(prevNode);
                         currentLocation = prevNode;
                         Debug.Log($"Moving to node id {prevNode}");
                         actionsLeft-=movedist-1;
                     }
-                    GameController.gameController.TrySpecialAction(Node.GetNode(scanTarget));
+                    gcr.TrySpecialAction(Node.GetNode(scanTarget));
                     Debug.Log($"Scanning node id {scanTarget}");
                     actionsLeft--;
                 }
@@ -119,7 +113,7 @@ public class ProbabilityScan : BotTemplate
                     int toMoveTo = SelectNextNodeRandom(currentLocation);
                     Debug.Log($"Moving to node id {toMoveTo}");
     
-                    GameController.gameController.TryMoveToNode(toMoveTo);
+                    gcr.TryMoveToNode(toMoveTo);
                     currentLocation = toMoveTo;
                     actionsLeft--;
                 }
@@ -127,7 +121,7 @@ public class ProbabilityScan : BotTemplate
             }
         }
 
-        GameController.gameController.ProgressTurn();
+        gcr.ProgressTurn();
     }
     public override int SelectNextNode(int playerID, int currentNodeID)
     {
