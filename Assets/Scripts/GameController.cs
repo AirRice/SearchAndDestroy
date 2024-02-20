@@ -548,7 +548,7 @@ public class GameController : MonoBehaviour
         }       
     }*/
 
-    private readonly string[] arrowDirs = {"<-","<-","->","->"};
+    private readonly string[] arrowDirs = {"<-","->","<-","->"};
     public void TryNodeTrack(Node toTrack)
     {
         Vector3 offset = new(0,0.55f,0);
@@ -563,12 +563,13 @@ public class GameController : MonoBehaviour
         int minDist = adjsDist.Min();
         bool[] adjNodesExist = {
             (toTrack.nodeID - mapSize > 0), 
-            (toTrack.nodeID - 1 > 0), 
             (toTrack.nodeID + mapSize <= mapSize*mapSize), 
+            (toTrack.nodeID - 1 > 0), 
             (toTrack.nodeID + 1 <= mapSize*mapSize)
         };
         // use the arrow dirs predefined strings.. IF they even are valid
         string[] arrowDirsFiltered = arrowDirs.Where((str, index) => adjNodesExist[index]).ToArray();
+        Debug.Log(string.Join(", ", arrowDirsFiltered));
         for(int i = 0; i<adjs.Length; i++){
             if(adjsDist[i] == minDist)
             {
@@ -743,35 +744,27 @@ public class GameController : MonoBehaviour
     are of value 1+(mapsize * n) where n is an int 0 <= n
     are of value mapsize * n where n is an int 1 <= n
     */
-    public bool[] GetAdjacentNodesExist (int nodeID)
-    {
-        bool[] tests = {
-            (nodeID - mapSize > 0), 
-            (nodeID - 1 > 0), 
-            (nodeID + mapSize <= mapSize*mapSize), 
-            (nodeID + 1 <= mapSize*mapSize)
-        };
-        return tests;
-    }
+
     public int[] GetAdjacentNodes (int nodeID, int maxdist = 1)
     {
         List<int> connectedNodes = new();
-        int[] adjNodesRaw = {nodeID - mapSize, nodeID - 1, nodeID + mapSize, nodeID + 1};
-        int[] adjNodes = adjNodesRaw.Where((str, index) => GetAdjacentNodesExist(nodeID)[index]).ToArray();
-
-        /*foreach(NodeLink link in nodeLinksList)
-        {
-            if(link.ConnectsToNode(nodeID))
-            {
-                int? otherNode = link.getOtherNode(nodeID);
-                if (otherNode != null)
+        for(int i=1;i<=maxdist;i++){
+            for(int j=0;j<=maxdist-i;j++){
+                connectedNodes.Add(nodeID - mapSize*i - j);
+                connectedNodes.Add(nodeID + mapSize*i - j);
+                if(j != 0)
                 {
-                    
-                }
+                    connectedNodes.Add(nodeID - mapSize*i + j);
+                    connectedNodes.Add(nodeID + mapSize*i + j);
+                }        
             }
-        }*/
-        Debug.Log(string.Join(", ", adjNodes));
-        return adjNodes;
+        }
+        for(int j=1;j<=maxdist;j++){
+            connectedNodes.Add(nodeID - j);
+            connectedNodes.Add(nodeID + j);
+        }
+        Debug.Log(string.Join(", ", connectedNodes));
+        return connectedNodes.Where(node => (node <= mapSize*mapSize && node > 0)).ToArray();
     }
     public void HighlightAllPaths(bool highlighted = true)
     {

@@ -19,20 +19,7 @@ public class SharedScan : BotTemplate
         }
         else if(playerID == 1)
         {
-            for (int i = SharedScan.possibleLocations.Count-1; i >=0 ; i--)
-            {
-                int curNode = SharedScan.possibleLocations[i];
-                bool nodeflag = false;
-                int[] pathto = gcr.GetCappedPath(curNode,info.Item1);
-                int nodeOfDir = info.Item2[0];
-                // Delete the node from the list if it's not in the direction of the given node + equal distance away from all given nodes (if multiple exist)
-                if(pathto.Contains(nodeOfDir) && info.Item2.All(id => gcr.GetPathLength(id,curNode) == gcr.GetPathLength(nodeOfDir,curNode)))
-                {
-                    nodeflag = true;
-                }
-                if (!nodeflag)
-                    SharedScan.possibleLocations.RemoveAll(r => r == curNode);
-            }
+            
         } 
         int currentLocation = currentNodeID;
         
