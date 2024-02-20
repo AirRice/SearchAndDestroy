@@ -26,7 +26,7 @@ public class GreedyTrojan : BotTemplate
             foreach (int tgt in targets)
             {
                 int pathLen = gcr.GetPathLength(currentNodeID,tgt);
-                if(infectedNodeIDs.Contains(tgt))
+                if(gcr.infectedNodeIDs.Contains(tgt))
                 {
                     // Skip ones that already are done.
                     continue;

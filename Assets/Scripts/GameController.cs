@@ -479,7 +479,7 @@ public class GameController : MonoBehaviour
         Node playerNode = Node.GetNode(toMovePlayerPiece.currentNodeID);
         if(thisNode == null)
         {
-            thisNode = playerNode
+            thisNode = playerNode;
         }
         if (currentTurnPlayer == 0)
         {
@@ -561,9 +561,14 @@ public class GameController : MonoBehaviour
         }      
         int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
         int minDist = adjsDist.Min();
-        
+        bool[] adjNodesExist = {
+            (toTrack.nodeID - mapSize > 0), 
+            (toTrack.nodeID - 1 > 0), 
+            (toTrack.nodeID + mapSize <= mapSize*mapSize), 
+            (toTrack.nodeID + 1 <= mapSize*mapSize)
+        };
         // use the arrow dirs predefined strings.. IF they even are valid
-        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => GetAdjacentNodesExist(toTrack.nodeID)[index]).ToArray();
+        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => adjNodesExist[index]).ToArray();
         for(int i = 0; i<adjs.Length; i++){
             if(adjsDist[i] == minDist)
             {
@@ -573,7 +578,7 @@ public class GameController : MonoBehaviour
                 textPopup.SetText(arrowDirsFiltered[i], mainCam);
             }
         }
-        scanHistory.Add((toTrack.nodeID, closestNodes.ToArray());
+        scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
     //
@@ -748,10 +753,10 @@ public class GameController : MonoBehaviour
         };
         return tests;
     }
-    public int[] GetAdjacentNodes (int nodeID)
+    public int[] GetAdjacentNodes (int nodeID, int maxdist = 1)
     {
         List<int> connectedNodes = new();
-        int[] adjNodesRaw = {nodeID - mapSize, nodeID - 1, nodeID + mapSize, nodeID + 1}
+        int[] adjNodesRaw = {nodeID - mapSize, nodeID - 1, nodeID + mapSize, nodeID + 1};
         int[] adjNodes = adjNodesRaw.Where((str, index) => GetAdjacentNodesExist(nodeID)[index]).ToArray();
 
         /*foreach(NodeLink link in nodeLinksList)
@@ -768,7 +773,6 @@ public class GameController : MonoBehaviour
         Debug.Log(string.Join(", ", adjNodes));
         return adjNodes;
     }
-
     public void HighlightAllPaths(bool highlighted = true)
     {
         foreach(GameObject lineDrawer in GameObject.FindGameObjectsWithTag("lineHandler"))

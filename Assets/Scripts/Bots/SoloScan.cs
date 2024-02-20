@@ -27,7 +27,7 @@ public class SoloScan : BotTemplate
         while(actionsLeft > 0)
         {
             int scanTarget = -1;
-            List<(int,int)> prevScans = GameController.gameController.scanHistory;
+            List<(int,int[])> prevScans = GameController.gameController.scanHistory;
 
             // If no previous scan info exists for the turn, do one just for some information
             if (prevScans.Count == 0)
