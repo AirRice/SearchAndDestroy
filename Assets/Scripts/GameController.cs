@@ -35,6 +35,7 @@ public class GameController : MonoBehaviour
     public PlayerPiece hiddenPlayerPiece;
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
+    public int lastInfectedNode;
     public List<int> infectedNodeIDs;
     // the Target node(s) to which the hiding player must go and infect.
     public List<int> targetNodeIDs;
@@ -49,7 +50,7 @@ public class GameController : MonoBehaviour
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
     public List<NodeLink> nodeLinksList = new();
-    public List<(int,int)> scanHistory;
+    public List<(int,int[])> scanHistory;
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
@@ -125,6 +126,7 @@ public class GameController : MonoBehaviour
         playerPiecesList = new List<PlayerPiece>();
         hiddenPlayerPiece = null;
         currentPlayerMoves = 0;
+        lastInfectedNode = -1;
         currentPlayerDidSpecialAction = false;
         infectedNodeIDs = new List<int>();
         currentTurnPlayer = 0;
@@ -421,21 +423,23 @@ public class GameController : MonoBehaviour
     // Move a player to a node, expending moves as required. Automatically logs movement & prunes movement path based on remaining 
     public void TryMoveToNode(int toMoveTo)
     {
-        if(currentPlayerMoves < 1)
-            return;
-        if(infectedNodeIDs.Contains(toMoveTo)  && localPlayerID != 0)
-        {
-            return;    
-        }
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
+        int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
+        if(movePath.Length <= 0)
+        {
+            return;
+        }
+        currentPlayerMoves -= (movePath.Length-1);
+        toMoveTo = movePath.Last();
         if(toMoveTo==toMovePlayerPiece.currentNodeID)
         {
             return;
         }
-        
-        int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
-        currentPlayerMoves -= (movePath.Length-1);
-        toMoveTo = movePath.Last();
+        if(infectedNodeIDs.Contains(toMoveTo))
+        {
+            if (localPlayerID != 0 || currentPlayerMoves <= 1)
+            return;    
+        }        
         //Debug.Log(currentPlayerMoves);
         if(logToCSV)
         {
@@ -465,7 +469,7 @@ public class GameController : MonoBehaviour
             }
         }
     }
-    public void TrySpecialAction(Node thisNode)
+    public void TrySpecialAction(Node thisNode = null)
     {
         if(currentPlayerMoves < 1)
             return;
@@ -473,6 +477,10 @@ public class GameController : MonoBehaviour
             return;
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
         Node playerNode = Node.GetNode(toMovePlayerPiece.currentNodeID);
+        if(thisNode == null)
+        {
+            thisNode = playerNode;
+        }
         if (currentTurnPlayer == 0)
         {
             bool isAdjacent = false;
@@ -511,6 +519,7 @@ public class GameController : MonoBehaviour
     public void TryNodeInfect(Node toInfect)
     {
         nodeWasInfectedLastTurn = true;
+        lastInfectedNode = toInfect.nodeID;
         infectedNodeIDs.Add(toInfect.nodeID);
         toInfect.Infect();
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
@@ -521,7 +530,7 @@ public class GameController : MonoBehaviour
     }
 
     //Scan the specified node and receive the distance (Scanner Players)
-    public void TryNodeScan(Node toScan)
+    /*public void TryNodeScan(Node toScan)
     {
         Vector3 offset = new(0,0.55f,0);
 
@@ -537,8 +546,9 @@ public class GameController : MonoBehaviour
             EndGame(false);
             return;
         }       
-    }
-    private readonly string[] arrowDirs = {"<-","<-","->","->"};
+    }*/
+
+    private readonly string[] arrowDirs = {"<-","->","<-","->"};
     public void TryNodeTrack(Node toTrack)
     {
         Vector3 offset = new(0,0.55f,0);
@@ -551,8 +561,15 @@ public class GameController : MonoBehaviour
         }      
         int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
         int minDist = adjsDist.Min();
+        bool[] adjNodesExist = {
+            (toTrack.nodeID - mapSize > 0), 
+            (toTrack.nodeID + mapSize <= mapSize*mapSize), 
+            (toTrack.nodeID - 1 > 0), 
+            (toTrack.nodeID + 1 <= mapSize*mapSize)
+        };
         // use the arrow dirs predefined strings.. IF they even are valid
-        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => GetAdjacentNodesExist(toTrack.nodeID)[index]).ToArray();
+        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => adjNodesExist[index]).ToArray();
+        Debug.Log(string.Join(", ", arrowDirsFiltered));
         for(int i = 0; i<adjs.Length; i++){
             if(adjsDist[i] == minDist)
             {
@@ -562,6 +579,7 @@ public class GameController : MonoBehaviour
                 textPopup.SetText(arrowDirsFiltered[i], mainCam);
             }
         }
+        scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
     //
@@ -593,6 +611,11 @@ public class GameController : MonoBehaviour
     {
         if(gameEnded)
             return;
+        if(infectedNodeIDs.Contains(GetActivePlayerPosition()))
+        // Don't let them end the turn if they're on an infected node: stop stalling
+        {
+            return;    
+        }
         if(increment)
         {
             turnCount++;
@@ -604,7 +627,7 @@ public class GameController : MonoBehaviour
             }
             if(GetTurnNumber()>maxTurnCount)
             {
-                EndGame(true);
+                EndGame(false);
             }
         }
         gameHud.ResetPlayerActionButton();
@@ -632,14 +655,15 @@ public class GameController : MonoBehaviour
         {
             Debug.Log("handle automatic turn");
             //Handle automatic turn
-            int currentPlayerNode = currentTurnPlayer==0 ? hiddenPlayerLocation : hunterPlayerLocations[currentTurnPlayer-1];
+            int currentPlayerNode = GetActivePlayerPosition();
             playerBotControllers[currentTurnPlayer].ProcessTurn(currentTurnPlayer, currentPlayerNode, currentPlayerMoves);
         }
     }
 
     void StartHiddenTurn()
     {
-        scanHistory = new List<(int,int)>();
+        lastInfectedNode = -1;
+        scanHistory = new List<(int,int[])>();
         foreach(KeyValuePair<int,Node> nodePair in nodesDict)
         {
             // Reset node infected state when the hidden player's turn activates
@@ -720,47 +744,28 @@ public class GameController : MonoBehaviour
     are of value 1+(mapsize * n) where n is an int 0 <= n
     are of value mapsize * n where n is an int 1 <= n
     */
-    public bool[] GetAdjacentNodesExist (int nodeID)
-    {
-        bool[] tests = {
-            (nodeID - mapSize > 0), 
-            (nodeID - 1 > 0), 
-            (nodeID + mapSize <= mapSize*mapSize), 
-            (nodeID + 1 <= mapSize*mapSize)
-        };
-        return tests;
-    }
-    public int[] GetAdjacentNodes (int nodeID)
+
+    public int[] GetAdjacentNodes (int nodeID, int maxdist = 1)
     {
         List<int> connectedNodes = new();
-
-        if (nodeID - mapSize > 0)
-            connectedNodes.Add(nodeID - mapSize);
-
-        if (nodeID - 1 > 0)
-            connectedNodes.Add(nodeID - 1);
-
-        if (nodeID + mapSize <= mapSize*mapSize)
-            connectedNodes.Add(nodeID + mapSize);
-
-        if (nodeID + 1 <= mapSize*mapSize)
-            connectedNodes.Add(nodeID + 1);
-
-        /*foreach(NodeLink link in nodeLinksList)
-        {
-            if(link.ConnectsToNode(nodeID))
-            {
-                int? otherNode = link.getOtherNode(nodeID);
-                if (otherNode != null)
+        for(int i=1;i<=maxdist;i++){
+            for(int j=0;j<=maxdist-i;j++){
+                connectedNodes.Add(nodeID - mapSize*i - j);
+                connectedNodes.Add(nodeID + mapSize*i - j);
+                if(j != 0)
                 {
-                    
-                }
+                    connectedNodes.Add(nodeID - mapSize*i + j);
+                    connectedNodes.Add(nodeID + mapSize*i + j);
+                }        
             }
-        }*/
-        Debug.Log(string.Join(", ", connectedNodes.ToArray()));
-        return connectedNodes.ToArray();
+        }
+        for(int j=1;j<=maxdist;j++){
+            connectedNodes.Add(nodeID - j);
+            connectedNodes.Add(nodeID + j);
+        }
+        Debug.Log(string.Join(", ", connectedNodes));
+        return connectedNodes.Where(node => (node <= mapSize*mapSize && node > 0)).ToArray();
     }
-
     public void HighlightAllPaths(bool highlighted = true)
     {
         foreach(GameObject lineDrawer in GameObject.FindGameObjectsWithTag("lineHandler"))
