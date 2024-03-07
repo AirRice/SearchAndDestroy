@@ -853,7 +853,6 @@ public class GameController : MonoBehaviour
     // implementation of in-place shuffle algorithm
     public List<int> ShuffleList(List<int> list)
     {
-        Debug.Log(string.Join(",",list));
         for(int i=0; i<list.Count-1; ++i)
         {
             int randIndex = Random.Range(i,list.Count);
@@ -861,7 +860,6 @@ public class GameController : MonoBehaviour
             list[i] = list[randIndex];
             list[randIndex] = temp;
         }
-        Debug.Log(string.Join(",",list));
         return list;
     }
 }

@@ -58,8 +58,6 @@ public class SharedScan : BotTemplate
                     }
                 }
             }
-
-            Debug.Log(string.Join(", ", (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToArray()));
         } 
         int currentLocation = currentNodeID;
         
@@ -99,7 +97,6 @@ public class SharedScan : BotTemplate
                     {
                         bool nodeflag = false;
                         int[] pathto = gcr.GetCappedPath(curNode,info.Item1);
-                        Debug.Log(string.Join(", ", pathto));
                         // Delete the node from the list if it's not in the direction of the given node + equal distance away from all given nodes (if multiple exist)
                         foreach (int nodeOfDir in info.Item2)
                         {
@@ -121,7 +118,6 @@ public class SharedScan : BotTemplate
                 if (targetLocs.Count > 0)
                 {              
                     int rand_index = Random.Range(0, targetLocs.Count);
-                    Debug.Log(string.Join(", ", targetLocs) + $" selecting element number {rand_index}");
                     scanTarget = targetLocs[rand_index];
                     Debug.Log($"Potential Target found: node id {scanTarget}");
                 }

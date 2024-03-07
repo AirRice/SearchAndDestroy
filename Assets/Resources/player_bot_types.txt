@@ -1,1 +1,1 @@
-0;SharedScan;SharedScan
+GreedyTrojan;SharedScan;SharedScan
