@@ -227,6 +227,10 @@ public class GameController : MonoBehaviour
                 noBotPlayers = false;
             }
             playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
+            if (playerBotControllers[i] != null)
+            {
+                playerBotControllers[i].SetHidden( i==0 );
+            }
         }
     }
 

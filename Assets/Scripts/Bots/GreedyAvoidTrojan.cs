@@ -5,8 +5,8 @@ using System.Linq;
 
 public class GreedyAvoidTrojan : BotTemplate
 {
-    public readonly float risk_factor = 0.1f; // Chance of risk-taking: will ignore avoidance with this frequency
-    public readonly int avoid_dist = 3;
+    public readonly float risk_factor = 0.01f; // Chance of risk-taking: will ignore avoidance with this frequency
+    public readonly int avoid_dist = 2;
     public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
     {
         GameController gcr = GameController.gameController;

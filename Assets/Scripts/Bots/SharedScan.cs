@@ -126,21 +126,27 @@ public class SharedScan : BotTemplate
                     
                     Debug.Log($"Moving to Scan target {scanTarget}");
                     int finalLocation = gcr.TryMoveToNode(scanTarget);
-                    actionsLeft-=gcr.GetPathLength(currentLocation,finalLocation);
-                    currentLocation = finalLocation;
+                    if (finalLocation != -1)
+                    {
+                        actionsLeft-=gcr.GetPathLength(currentLocation,finalLocation);
+                        currentLocation = finalLocation;
 
-                    gcr.TrySpecialAction(Node.GetNode(scanTarget));
-                    Debug.Log($"Scanning node id {scanTarget}");
-                    actionsLeft--;
+                        gcr.TrySpecialAction(Node.GetNode(scanTarget));
+                        Debug.Log($"Scanning node id {scanTarget}");
+                        actionsLeft--;
+                    }
                 }
                 else if (fallbackTarget > 0 && fallbackTarget < mapSizeSq)
                 {
                     int toMoveTo = fallbackTarget;
                     Debug.Log($"Moving to node id {toMoveTo}");
-    
-                    gcr.TryMoveToNode(toMoveTo);
-                    currentLocation = toMoveTo;
-                    actionsLeft--;
+
+                    int finalLocation = gcr.TryMoveToNode(scanTarget);
+                    if (finalLocation != -1)
+                    {
+                        actionsLeft-=gcr.GetPathLength(currentLocation,finalLocation);
+                        currentLocation = finalLocation;
+                    }
                 }
 
             }

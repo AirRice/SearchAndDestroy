@@ -50,7 +50,6 @@ public class GreedyTrojan : BotTemplate
                     int[] toPrevNode = gcr.GetCappedPath(currentLocation,min,movedist-1);
                     int prevNode = toPrevNode[^1];
                     Debug.Log($"target {min}, Previous node {prevNode}");
-                    
                     gcr.TryMoveToNode(prevNode);
                     currentLocation = prevNode;
                     Debug.Log($"Moving to node id {prevNode}");

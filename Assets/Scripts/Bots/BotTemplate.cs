@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 public abstract class BotTemplate : ScriptableObject
 {
-    private readonly bool hiddenBot = false;
-    //
+    protected bool isHiddenBot;
+    public void SetHidden(bool b)
+    {
+        isHiddenBot = b;
+    }
     public void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
     {
         Debug.Log($"Processing turn for player {playerID}");
-        if((hiddenBot && playerID != 0) || (!hiddenBot && playerID == 0))
+        if((isHiddenBot && playerID != 0) || (!isHiddenBot && playerID == 0))
         {
             Debug.Log($"Warning: Player {playerID} is not a valid target for {GetType().Name}.");
             return;
