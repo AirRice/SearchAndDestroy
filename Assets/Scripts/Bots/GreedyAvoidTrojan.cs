@@ -7,17 +7,10 @@ public class GreedyAvoidTrojan : BotTemplate
 {
     public readonly float risk_factor = 0.1f; // Chance of risk-taking: will ignore avoidance with this frequency
     public readonly int avoid_dist = 3;
-    public override void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
+    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
     {
         GameController gcr = GameController.gameController;
         int mapSizeSq = gcr.mapSize * gcr.mapSize;
-        Debug.Log($"Processing turn for player {playerID}");
-        if(playerID != 0)
-        {
-            Debug.Log($"Warning: Player {playerID} is not a valid target for GreedyAvoidTrojan.");
-            return;
-        }
-
         int currentLocation = currentNodeID;
         List<int> targets = gcr.targetNodeIDs;
 
@@ -113,9 +106,5 @@ public class GreedyAvoidTrojan : BotTemplate
         }
 
         gcr.ProgressTurn();
-    }
-    public override int SelectNextNode(int playerID, int currentNodeID)
-    {
-        return 0;
     }
 }

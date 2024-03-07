@@ -7,58 +7,51 @@ public class SharedScan : BotTemplate
 {
     public static Dictionary<int,bool> possibleLocations = new(); //Node ID dict: int node ID, bool is possible.
         
-    public override void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
+    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
     {
         GameController gcr = GameController.gameController;
         int mapSizeSq = GameController.gameController.mapSize * GameController.gameController.mapSize;
-        Debug.Log($"Processing turn for player {playerID}");
-        if(playerID == 0)
+
+        // Reset this dict when a new round starts
+        if (gcr.turnCount == 0)
         {
-            Debug.Log($"Warning: Player {playerID} is not a valid target for SharedScan.");
-            return;
+            possibleLocations = new();
         }
-        else if(playerID == 1)
+
+        //Make this list for the first time if it doesn't exist yet. 
+        //Add the hidden player's spawn if it's the first time (first turn expected)
+        if (SharedScan.possibleLocations.Count == 0)
         {
-            // Reset this dict when a new round starts
-            if (gcr.turnCount == 0)
+            for ( int i = 1; i <= mapSizeSq; i++ )
             {
-                possibleLocations = new();
+                SharedScan.possibleLocations.Add(i, false);
             }
+            SharedScan.possibleLocations[gcr.hiddenSpawn.nodeID] = true;
+        }
 
-            //Make this list for the first time if it doesn't exist yet. 
-            //Add the hidden player's spawn if it's the first time (first turn expected)
-            if (SharedScan.possibleLocations.Count == 0)
+        int[] locationsToPropagate = (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
+        //If a node was infected add the surrounding nodes to the possible locations info
+        //This can be up to (max movement limit - distance to last infected node from closest last possible node) distance away
+        int lastInfected = gcr.lastInfectedNode;
+        if (lastInfected < mapSizeSq && lastInfected > 0 )
+        {
+            foreach(int nodeID in gcr.GetAdjacentNodes(lastInfected,3))
             {
-                for ( int i = 1; i <= mapSizeSq; i++ )
-                {
-                    SharedScan.possibleLocations.Add(i, false);
-                }
-                SharedScan.possibleLocations[gcr.hiddenSpawn.nodeID] = true;
+                SharedScan.possibleLocations[nodeID] = true;
             }
-
-            int[] locationsToPropagate = (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
-            //If a node was infected add the surrounding nodes to the possible locations info
-            //This can be up to (max movement limit - distance to last infected node from closest last possible node) distance away
-            int lastInfected = gcr.lastInfectedNode;
-            if (lastInfected < mapSizeSq && lastInfected > 0 )
+        }
+        else
+        {
+            //Grow the search space size if a turn has passed, because the hidden player may have moved.
+            foreach(int locID in locationsToPropagate)
             {
-                foreach(int nodeID in gcr.GetAdjacentNodes(lastInfected,3))
+                foreach(int nodeID in gcr.GetAdjacentNodes(locID, 3))
                 {
                     SharedScan.possibleLocations[nodeID] = true;
                 }
             }
-            else
-            {
-                //Grow the search space size if a turn has passed, because the hidden player may have moved.
-                foreach(int locID in locationsToPropagate)
-                {
-                    foreach(int nodeID in gcr.GetAdjacentNodes(locID, 3))
-                    {
-                        SharedScan.possibleLocations[nodeID] = true;
-                    }
-                }
-            }
-        } 
+        }
+
         int currentLocation = currentNodeID;
         
         /**
@@ -154,9 +147,5 @@ public class SharedScan : BotTemplate
         }
 
         gcr.ProgressTurn();
-    }
-    public override int SelectNextNode(int playerID, int currentNodeID)
-    {
-        return 0;
     }
 }

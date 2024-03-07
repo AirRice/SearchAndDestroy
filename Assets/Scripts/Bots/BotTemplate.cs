@@ -3,8 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 public abstract class BotTemplate : ScriptableObject
 {
-    public abstract void ProcessTurn(int playerID, int currentNodeID, int actionsLeft);
-    public abstract int SelectNextNode(int playerID, int currentNodeID);
+    private readonly bool hiddenBot = false;
+    //
+    public void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
+    {
+        Debug.Log($"Processing turn for player {playerID}");
+        if((hiddenBot && playerID != 0) || (!hiddenBot && playerID == 0))
+        {
+            Debug.Log($"Warning: Player {playerID} is not a valid target for {GetType().Name}.");
+            return;
+        }
+        HandleTurn(playerID, currentNodeID, actionsLeft);
+    }
+    public abstract void HandleTurn(int playerID, int currentNodeID, int actionsLeft);
     public int SelectNextNodeRandom(int currentNodeID)
     {
         int[] adjs = GameController.gameController.GetAdjacentNodes(currentNodeID);

@@ -4,16 +4,10 @@ using UnityEngine;
 
 public class GreedyTrojan : BotTemplate
 {
-    public override void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
+    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
     {
         GameController gcr = GameController.gameController;
         Debug.Log($"Processing turn for player {playerID}");
-        if(playerID != 0)
-        {
-            Debug.Log($"Warning: Player {playerID} is not a valid target for SoloScan.");
-            return;
-        }
-
         int currentLocation = currentNodeID;
         List<int> targets = gcr.targetNodeIDs;
 
@@ -80,9 +74,5 @@ public class GreedyTrojan : BotTemplate
         }
 
         gcr.ProgressTurn();
-    }
-    public override int SelectNextNode(int playerID, int currentNodeID)
-    {
-        return 0;
     }
 }
