@@ -46,7 +46,7 @@ public class GameController : MonoBehaviour
     public Dictionary<int, BotTemplate> playerBotsDict = new();
     public bool gameEnded = false;
     public int turnCount = 0;
-    protected Node hunterSpawn, hiddenSpawn = null;
+    public Node hunterSpawn, hiddenSpawn = null;
     protected int hiddenPlayerLocation;
     protected int[] hunterPlayerLocations;
     public List<NodeLink> nodeLinksList = new();
@@ -139,7 +139,7 @@ public class GameController : MonoBehaviour
         targetNodeIDs = new List<int>();
         cachedPaths = new Dictionary<(int,int), int[]>();
         nodeWasInfectedLastTurn = false;
-
+        
         if(restart){
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
@@ -227,6 +227,10 @@ public class GameController : MonoBehaviour
                 noBotPlayers = false;
             }
             playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
+            if (playerBotControllers[i] != null)
+            {
+                playerBotControllers[i].SetHidden( i==0 );
+            }
         }
     }
 
@@ -421,24 +425,25 @@ public class GameController : MonoBehaviour
     }
 
     // Move a player to a node, expending moves as required. Automatically logs movement & prunes movement path based on remaining 
-    public void TryMoveToNode(int toMoveTo)
+    // returns the int we ended up at
+    public int TryMoveToNode(int toMoveTo)
     {
         PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
         int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
         if(movePath.Length <= 0)
         {
-            return;
+            return -1;
         }
         currentPlayerMoves -= (movePath.Length-1);
         toMoveTo = movePath.Last();
         if(toMoveTo==toMovePlayerPiece.currentNodeID)
         {
-            return;
+            return -1;
         }
         if(infectedNodeIDs.Contains(toMoveTo))
         {
             if (localPlayerID != 0 || currentPlayerMoves <= 1)
-            return;    
+            return -1;    
         }        
         //Debug.Log(currentPlayerMoves);
         if(logToCSV)
@@ -450,6 +455,7 @@ public class GameController : MonoBehaviour
             toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
         }
         UpdateActivePlayerPosition(toMoveTo);
+        return toMoveTo;
     }
     // Try handling path checks
     public void TryPathHighlight(int[] pathToHovered, bool toHighlight=true)
@@ -569,7 +575,6 @@ public class GameController : MonoBehaviour
         };
         // use the arrow dirs predefined strings.. IF they even are valid
         string[] arrowDirsFiltered = arrowDirs.Where((str, index) => adjNodesExist[index]).ToArray();
-        Debug.Log(string.Join(", ", arrowDirsFiltered));
         for(int i = 0; i<adjs.Length; i++){
             if(adjsDist[i] == minDist)
             {
@@ -674,7 +679,7 @@ public class GameController : MonoBehaviour
                 infectedNodeIDs.Remove(nodePair.Value.nodeID);
             }
         }
-        if(this.localPlayerID==0 && hiddenPlayerPiece == null)
+        if(this.localPlayerID==0)
         {
             //Debug.Log("Making new hidden player piece");
             PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -763,7 +768,7 @@ public class GameController : MonoBehaviour
             connectedNodes.Add(nodeID - j);
             connectedNodes.Add(nodeID + j);
         }
-        Debug.Log(string.Join(", ", connectedNodes));
+        //Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => (node <= mapSize*mapSize && node > 0)).ToArray();
     }
     public void HighlightAllPaths(bool highlighted = true)
@@ -779,7 +784,10 @@ public class GameController : MonoBehaviour
         if (!cachedPaths.TryGetValue((startPointID, endPointID), out int[] foundPathRaw))
         {
             foundPathRaw = this.SearchPath(startPointID, endPointID);
-            cachedPaths.Add((startPointID, endPointID), foundPathRaw);
+            if (infectedNodeIDs.Intersect(foundPathRaw).ToArray().Count() <= 0)
+            {
+                cachedPaths.Add((startPointID, endPointID), foundPathRaw);
+            }
         }
         if (maxhops == -1 || foundPathRaw.Length <= maxhops+1)
             return foundPathRaw;
@@ -849,7 +857,6 @@ public class GameController : MonoBehaviour
     // implementation of in-place shuffle algorithm
     public List<int> ShuffleList(List<int> list)
     {
-        Debug.Log(string.Join(",",list));
         for(int i=0; i<list.Count-1; ++i)
         {
             int randIndex = Random.Range(i,list.Count);
@@ -857,7 +864,6 @@ public class GameController : MonoBehaviour
             list[i] = list[randIndex];
             list[randIndex] = temp;
         }
-        Debug.Log(string.Join(",",list));
         return list;
     }
 }

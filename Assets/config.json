@@ -1,1 +1,1 @@
-{"mapSize":5,"playersCount":3,"movesCount":3,"maxTurnCount":30,"maxRoundCount":1000,"maxObjectives":3,"hotSeatMode":true,"logToCSV":false,"useSmoothMove":true}
+{"mapSize":5,"playersCount":3,"movesCount":3,"maxTurnCount":30,"maxRoundCount":1000,"maxObjectives":3,"hotSeatMode":true,"logToCSV":true,"useSmoothMove":false}

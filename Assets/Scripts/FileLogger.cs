@@ -17,6 +17,7 @@ public class FileLogger : MonoBehaviour
         else
             Destroy(gameObject);
         DontDestroyOnLoad(gameObject);
+        Debug.Log(Application.persistentDataPath);
     }
 
     // Returns the file path string. Called when awaken only.
@@ -26,7 +27,7 @@ public class FileLogger : MonoBehaviour
         DateTime timeNow = DateTime.Now;
         string timeString = timeNow.ToUniversalTime().ToString(datePatt);
         string botTypes = string.Join("-", GameController.gameController.playerBotType);
-        return "E:/Unity Tutorial/SearchAndDestroy-logs" + "/Logs/" + timeString + botTypes + ".csv";
+        return Application.persistentDataPath + "/Logs/" + timeString + botTypes + ".csv";
     }
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
