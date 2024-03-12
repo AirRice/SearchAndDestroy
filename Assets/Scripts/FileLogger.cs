@@ -9,6 +9,7 @@ public class FileLogger : MonoBehaviour
     public static FileLogger mainInstance;
     private string filePath;
     private bool headerDone = false;
+    private int roundCount = 0;
     private void Awake()
     {
         //enforce singleton
@@ -17,7 +18,6 @@ public class FileLogger : MonoBehaviour
         else
             Destroy(gameObject);
         DontDestroyOnLoad(gameObject);
-        Debug.Log(Application.persistentDataPath);
     }
 
     // Returns the file path string. Called when awaken only.
@@ -31,15 +31,24 @@ public class FileLogger : MonoBehaviour
     }
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
-        filePath ??= filepath_override ?? GetLogPath();
+        filePath ??= filePath ?? GetLogPath();
         //Debug.Log($"Writing File {filePath}");
-        using (StreamWriter w = File.AppendText(filePath))
+        using (StreamWriter w = File.AppendText(filepath_override ?? filePath))
         {
             if (!headerDone){
-                w.WriteLine("Round,Turn,Player,ActionType,PrevNode,TargetNode");
+                w.WriteLine($"sep=|");
+                w.WriteLine("Round|Turn|Player|ActionType|PrevNode|TargetNode");
                 headerDone = true;
             }
-            w.WriteLine(log_string);
+            w.WriteLine($"{roundCount}|"+log_string);
         }
+    }
+    public void IncrementRound()
+    {
+        roundCount++;
+    }
+    public int GetCurrentRoundCount()
+    {
+        return roundCount;
     }
 }

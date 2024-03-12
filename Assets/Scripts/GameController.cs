@@ -18,7 +18,6 @@ public class GameController : MonoBehaviour
     //1 player is the hidden player, rest will be hunters
     public int movesCount = 3;
     public int maxTurnCount = 15;
-    public int roundCount = 0;
     public int maxRoundCount = 10;
     public int maxObjectives = 1;
     public bool hotSeatMode = true;
@@ -82,19 +81,7 @@ public class GameController : MonoBehaviour
 
         String[] fileLines = Regex.Split ( playerBotTypesData.text, "\n|\r|\r\n" );
         playerBotType = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
-
-        if (PlayerPrefs.HasKey("RoundsCount"))
-        {
-            // Handling round count (persistent between round restarts)
-            roundCount = PlayerPrefs.GetInt("RoundsCount");
-            roundCount ++;
-        }
-        else
-        {
-            roundCount = 0;
-        }
-        PlayerPrefs.SetInt("RoundsCount", roundCount);
-        PlayerPrefs.Save();
+        FileLogger.mainInstance.IncrementRound();
         StartGame();
     }
 
@@ -192,7 +179,7 @@ public class GameController : MonoBehaviour
         //Wait for 1 second
         yield return new WaitForSeconds(0.25f);
 
-        if (roundCount < maxRoundCount)
+        if (FileLogger.mainInstance.GetCurrentRoundCount() < maxRoundCount)
         {
             GameController.gameController.StartGame(true);
         }
@@ -428,15 +415,13 @@ public class GameController : MonoBehaviour
     // returns the int we ended up at
     public int TryMoveToNode(int toMoveTo)
     {
-        PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
-        int[] movePath = GetCappedPath(toMovePlayerPiece.currentNodeID, toMoveTo, currentPlayerMoves);
+        int[] movePath = GetCappedPath(GetActivePlayerPosition(), toMoveTo, currentPlayerMoves);
         if(movePath.Length <= 0)
         {
             return -1;
         }
-        currentPlayerMoves -= (movePath.Length-1);
         toMoveTo = movePath.Last();
-        if(toMoveTo==toMovePlayerPiece.currentNodeID)
+        if(toMoveTo==GetActivePlayerPosition())
         {
             return -1;
         }
@@ -445,13 +430,15 @@ public class GameController : MonoBehaviour
             if (localPlayerID != 0 || currentPlayerMoves <= 1)
             return -1;    
         }        
+        currentPlayerMoves -= (movePath.Length-1);
         //Debug.Log(currentPlayerMoves);
         if(logToCSV)
         {
-            FileLogger.mainInstance.WriteLineToLog($"{roundCount},{GetTurnNumber()},{currentTurnPlayer},0,{toMovePlayerPiece.currentNodeID},{toMoveTo}");
+            FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|0|{GetActivePlayerPosition()}|{toMoveTo}");
         }
         if(useSmoothMove)
         {
+            PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
             toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
         }
         UpdateActivePlayerPosition(toMoveTo);
@@ -481,8 +468,7 @@ public class GameController : MonoBehaviour
             return;
         if (currentTurnPlayer == 0 && currentPlayerDidSpecialAction)
             return;
-        PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
-        Node playerNode = Node.GetNode(toMovePlayerPiece.currentNodeID);
+        Node playerNode = Node.GetNode(GetActivePlayerPosition());
         if(thisNode == null)
         {
             thisNode = playerNode;
@@ -503,7 +489,7 @@ public class GameController : MonoBehaviour
                 currentPlayerMoves--;
                 if(logToCSV)
                 {
-                    FileLogger.mainInstance.WriteLineToLog($"{roundCount},{GetTurnNumber()},{currentTurnPlayer},1,{toMovePlayerPiece.currentNodeID},{thisNode.nodeID}");
+                    FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{thisNode.nodeID}");
                 }        
                 currentPlayerDidSpecialAction = true;
                 gameHud.playerActionButtonDown = false;
@@ -588,9 +574,47 @@ public class GameController : MonoBehaviour
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
     //
+    public void TryNodeTrackDebug(Node toTrack)
+    {
+    // Displays in numpad notation the direction the arrows would show normally
+        int curID = toTrack.nodeID;
+        Vector3 offset = new(0,0.55f,0);
+        for(int i = 1; i <= GameController.gameController.mapSize * GameController.gameController.mapSize; i++)
+        {
+            if (i == curID)
+                continue;
+            DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            textPopup.transform.position = transform.position = Node.GetNode(i).transform.position + offset;
+            int numpadNot = 0;
+            int lowerlim = (curID/mapSize);
+            Debug.Log(lowerlim);
+            if (i > lowerlim*mapSize && i <= (lowerlim + 1)*mapSize)
+            {
+                numpadNot = i < curID ? 1 : 9;
+            }
+            else if ((curID - i) % mapSize == 0 && i > 0 && i <= mapSize*mapSize )
+            {
+                numpadNot = i < curID ? 7 : 3;
+            }
+            else
+            {
+                numpadNot = 0;
+            }
+            textPopup.SetText(numpadNot.ToString(), mainCam);
+        }
+    }
+    // Movement between nodes can be done between one of four directions.
+    // Up Left: -(mapsize) from current node id
+    // Down Left: -1 from current node id
+    // Up Right: +1 from current node id
+    // Down Right: +(mapsize) from current node id
+    // within range 1 <= x <= mapsize
+    // within range (mapsize-1) * mapsize <= x <= mapsize * mapsize
+    // are of value 1+(mapsize * n) where n is an int 0 <= n
+    // are of value mapsize * n where n is an int 1 <= n
     public void UpdateActivePlayerPosition(int destID)
     {
-        PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();;
+        PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();
         if(currentTurnPlayer==0)
         {
             hiddenPlayerLocation = destID;
