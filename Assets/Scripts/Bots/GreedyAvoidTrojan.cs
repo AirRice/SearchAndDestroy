@@ -37,7 +37,7 @@ public class GreedyAvoidTrojan : BotTemplate
                         adjs.Remove(potential_target);
                     }
                 }
-                if (toMoveTo > 0 && toMoveTo < mapSizeSq)
+                if (toMoveTo > 0 && toMoveTo <= mapSizeSq)
                 {
                     Debug.Log($"Evading from scanner players to node id {toMoveTo}");
                     int finalLocation = gcr.TryMoveToNode(toMoveTo);

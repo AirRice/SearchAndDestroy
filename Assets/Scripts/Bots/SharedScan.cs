@@ -72,7 +72,7 @@ public class SharedScan : BotTemplate
             // If no info exists for the turn, do one just for some information
             if ((from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToList().Count <= 0)
             {
-                GameController.gameController.TrySpecialAction();
+                gcr.TrySpecialAction();
                 Debug.Log($"Scanning as first action");
                 actionsLeft--;
             }
@@ -131,22 +131,25 @@ public class SharedScan : BotTemplate
                         actionsLeft-=gcr.GetPathLength(currentLocation,finalLocation);
                         currentLocation = finalLocation;
 
-                        gcr.TrySpecialAction(Node.GetNode(scanTarget));
+                        gcr.TrySpecialAction();
                         Debug.Log($"Scanning node id {scanTarget}");
                         actionsLeft--;
                     }
                 }
-                else if (fallbackTarget > 0 && fallbackTarget < mapSizeSq)
+                else if (fallbackTarget > 0 && fallbackTarget <= mapSizeSq)
                 {
                     int toMoveTo = fallbackTarget;
                     Debug.Log($"Moving to node id {toMoveTo}");
 
-                    int finalLocation = gcr.TryMoveToNode(scanTarget);
+                    int finalLocation = gcr.TryMoveToNode(toMoveTo);
                     if (finalLocation != -1)
                     {
                         actionsLeft-=gcr.GetPathLength(currentLocation,finalLocation);
                         currentLocation = finalLocation;
                     }
+                }
+                else{
+                    Debug.Log("No possible location to move to found");
                 }
 
             }
