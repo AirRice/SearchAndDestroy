@@ -40,7 +40,7 @@ public class GameController : MonoBehaviour
     public List<int> targetNodeIDs;
     //The current turn will be, 0 = hidden player, all further players = i+1 in the hunterPlayerLocations array
     public int currentTurnPlayer = 0;
-    public String[] playerBotType;
+    public string[] playerBotType;
     private BotTemplate[] playerBotControllers;
     public Dictionary<int, BotTemplate> playerBotsDict = new();
     public bool gameEnded = false;
@@ -77,10 +77,7 @@ public class GameController : MonoBehaviour
         hotSeatMode = cfg.hotSeatMode;
         logToCSV = cfg.logToCSV;
         useSmoothMove = cfg.useSmoothMove;
-
-
-        String[] fileLines = Regex.Split ( playerBotTypesData.text, "\n|\r|\r\n" );
-        playerBotType = Regex.Split ( fileLines[0], ";" ); //file is split by semicolons
+        playerBotType = cfg.playerBotType;
         FileLogger.mainInstance.IncrementRound();
         StartGame();
     }
@@ -318,78 +315,6 @@ public class GameController : MonoBehaviour
         return false;
     }
 
-    [Obsolete("SetupBoard_legacy uses an older numbering scheme. Use the non-legacy version")]
-    void SetupBoard_legacy()
-    {   
-        // load file for setting the board up. Format: each rank of the board (in number of nodes)
-        float totalHorizLength = (mapSize * 2 - 2) * nodeHorizDist;
-        int currentNodeID = 1;
-        int nodeCountAtRank = 1;
-        int nodeCountPrevRank = 0;
-        List<int> middleRankNodes = new();
-        for ( int i=0; i < (mapSize * 2 - 1) ; i++ )
-        {
-            for ( int j=0; j < nodeCountAtRank; j++ )
-            {
-                float zLoc = (totalHorizLength/2)-((mapSize * 2 - 1)-(i+1))*nodeHorizDist;
-                float xLoc = (nodeVertDist*(nodeCountAtRank-1)/2)-nodeVertDist*j;
-                Node newNode = Instantiate(nodePrefab, new Vector3(xLoc, 0, zLoc), Quaternion.identity);
-                newNode.nodeID = currentNodeID;
-                newNode.gameObject.name = "Node"+currentNodeID;
-                nodesDict.Add(currentNodeID, newNode);
-                // Setup Spawn Points
-                if(i== (mapSize * 2 - 2) && j==nodeCountAtRank-1)
-                    newNode.gameObject.tag = "HunterSpawn";
-                else if(currentNodeID == 1)
-                    newNode.gameObject.tag = "HiddenSpawn";
-                //add middle rank nodes
-                if (i == (mapSize-1))
-                {
-                    middleRankNodes.Add(currentNodeID);
-                }
-                if(i>0)
-                {
-                    for (int k = 0; k<2; k++)
-                    {
-                        int otherNode;
-                        bool flag = false;
-                        if(nodeCountPrevRank==nodeCountAtRank)
-                        {
-                            otherNode = currentNodeID-nodeCountAtRank;
-                            flag = true;
-                        }    
-                        else
-                        {
-                            otherNode = currentNodeID-(nodeCountAtRank>nodeCountPrevRank ? nodeCountAtRank : nodeCountPrevRank) + k;
-                        }
-                        if (otherNode < currentNodeID-(nodeCountPrevRank+j) || otherNode > currentNodeID-(j+1))
-                            continue;
-                        NodeLink newLink = new(currentNodeID,otherNode);
-                        nodeLinksList.Add(newLink);
-                        if(flag)
-                            break;
-                    }
-                }
-                currentNodeID++;
-            }
-            nodeCountPrevRank = nodeCountAtRank;
-            if (currentNodeID*2 <= mapSize*mapSize) 
-                nodeCountAtRank++;
-            else 
-                nodeCountAtRank-=1;
-        }
-        middleRankNodes = ShuffleList(middleRankNodes);
-        for(int i=0;i<maxObjectives;i++)
-        {
-            int nodeID = middleRankNodes[i];
-            targetNodeIDs.Add(nodeID);
-            Node toTarget = Node.GetNode(nodeID);
-            toTarget.isTarget = true;
-            toTarget.ForceMakeTarget();
-        }
-        mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
-    }
-
     // Sets up the players' positions upon first starting, and generates visual representations for each (if applicable).
     void SetupPlayerPositions(Node hunterSpawn, Node hiddenSpawn)
     {
@@ -539,79 +464,40 @@ public class GameController : MonoBehaviour
             return;
         }       
     }*/
-
-    private readonly string[] arrowDirs = {"<-","->","<-","->"};
     public void TryNodeTrack(Node toTrack)
     {
-        Vector3 offset = new(0,0.55f,0);
-        List<int> closestNodes = new();
-        int[] adjs = GetAdjacentNodes(toTrack.nodeID);
         if(toTrack.nodeID == hiddenPlayerLocation)
         {
             EndGame(false);
             return;
-        }      
-        int[] adjsDist = adjs.Select(id=> GetPathLength(id, hiddenPlayerLocation)).ToArray();
-        int minDist = adjsDist.Min();
-        bool[] adjNodesExist = {
-            (toTrack.nodeID - mapSize > 0), 
-            (toTrack.nodeID + mapSize <= mapSize*mapSize), 
-            (toTrack.nodeID - 1 > 0), 
-            (toTrack.nodeID + 1 <= mapSize*mapSize)
-        };
-        // use the arrow dirs predefined strings.. IF they even are valid
-        string[] arrowDirsFiltered = arrowDirs.Where((str, index) => adjNodesExist[index]).ToArray();
-        for(int i = 0; i<adjs.Length; i++){
-            if(adjsDist[i] == minDist)
-            {
-                closestNodes.Add(adjs[i]);
-                DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-                textPopup.transform.position = transform.position = Node.GetNode(adjs[i]).transform.position + offset;
-                textPopup.SetText(arrowDirsFiltered[i], mainCam);
-            }
+        }
+        List<int> closestNodes = GetClosestAdjToDest(toTrack.nodeID, hiddenPlayerLocation);
+        Vector3 offset = new(0,0.55f,0);
+
+        foreach(int i in closestNodes){
+            DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            textPopup.transform.position = transform.position = Node.GetNode(i).transform.position + offset;
+            textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);
         }
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
-    //
-    public void TryNodeTrackDebug(Node toTrack)
+    public List<int> GetClosestAdjToDest(int sourceID, int destID)
     {
-    // Displays in numpad notation the direction the arrows would show normally
-        int curID = toTrack.nodeID;
-        Vector3 offset = new(0,0.55f,0);
-        for(int i = 1; i <= GameController.gameController.mapSize * GameController.gameController.mapSize; i++)
-        {
-            if (i == curID)
-                continue;
-            DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            textPopup.transform.position = transform.position = Node.GetNode(i).transform.position + offset;
-            int numpadNot = 0;
-            int lowerlim = (curID/mapSize);
-            Debug.Log(lowerlim);
-            if (i > lowerlim*mapSize && i <= (lowerlim + 1)*mapSize)
+        List<int> closestNodes = new();
+        int[] adjs = GetAdjacentNodes(sourceID);
+        int[] adjsDist = adjs.Select(id=> GetPathLength(id, destID)).ToArray();
+        int minDist = adjsDist.Min();
+
+        for(int i = 0; i<adjs.Length; i++){
+            if(adjsDist[i] == minDist)
             {
-                numpadNot = i < curID ? 1 : 9;
+                closestNodes.Add(adjs[i]);
             }
-            else if ((curID - i) % mapSize == 0 && i > 0 && i <= mapSize*mapSize )
-            {
-                numpadNot = i < curID ? 7 : 3;
-            }
-            else
-            {
-                numpadNot = 0;
-            }
-            textPopup.SetText(numpadNot.ToString(), mainCam);
         }
+        return closestNodes;
     }
-    // Movement between nodes can be done between one of four directions.
-    // Up Left: -(mapsize) from current node id
-    // Down Left: -1 from current node id
-    // Up Right: +1 from current node id
-    // Down Right: +(mapsize) from current node id
-    // within range 1 <= x <= mapsize
-    // within range (mapsize-1) * mapsize <= x <= mapsize * mapsize
-    // are of value 1+(mapsize * n) where n is an int 0 <= n
-    // are of value mapsize * n where n is an int 1 <= n
+
     public void UpdateActivePlayerPosition(int destID)
     {
         PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();
@@ -793,7 +679,10 @@ public class GameController : MonoBehaviour
             connectedNodes.Add(nodeID + j);
         }
         //Debug.Log(string.Join(", ", connectedNodes));
-        return connectedNodes.Where(node => (node <= mapSize*mapSize && node > 0)).ToArray();
+        return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
+    }
+    public bool NodeIsValid(int nodeID){
+        return (nodeID <= mapSize*mapSize && nodeID > 0);
     }
     public void HighlightAllPaths(bool highlighted = true)
     {
@@ -823,7 +712,7 @@ public class GameController : MonoBehaviour
     //Tried implementing BFS, unsure if the most robust or fast
     //Adapted from python implementation https://stackoverflow.com/questions/8922060/how-to-trace-the-path-in-a-breadth-first-search/50575971#50575971
     {
-        int maxDepth = 10;
+        int maxDepth = 20;
         //Edge case: same node for start & end
         if (startPointID == endPointID)
             return new int[] {endPointID};

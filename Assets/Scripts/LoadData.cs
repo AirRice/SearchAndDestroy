@@ -12,7 +12,6 @@ public class LoadData : MonoBehaviour
         ConfigData cfgData = JsonUtility.FromJson<ConfigData>(data);
         return cfgData;
     }
-
 }
 
 [System.Serializable]
@@ -26,4 +25,5 @@ public class ConfigData{
     public bool hotSeatMode;
     public bool logToCSV;
     public bool useSmoothMove;
+    public string[] playerBotType;
 }
