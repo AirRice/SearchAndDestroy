@@ -4,22 +4,20 @@ using UnityEngine;
 
 public class GreedyTrojan : BotTemplate
 {
-    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
+    private int curInfectTarget = -1;
+    protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
-        Debug.Log($"Processing turn for player {playerID}");
-        int currentLocation = currentNodeID;
         List<int> targets = gcr.targetNodeIDs;
 
-        while(actionsLeft > 0)
+        if (curInfectTarget == -1)
         {
-            //Iterate over each target, selecting the closest one
-                
+            //Iterate over each target, selecting the closest one                
             int min = -1;
             int mindist = 9999;
             foreach (int tgt in targets)
             {
-                int pathLen = gcr.GetPathLength(currentNodeID,tgt);
+                int pathLen = gcr.GetPathLength(currentLocation,tgt);
                 if(gcr.infectedNodeIDs.Contains(tgt))
                 {
                     // Skip ones that already are done.
@@ -31,47 +29,41 @@ public class GreedyTrojan : BotTemplate
                     min = tgt;
                 }
             }
-            if(min!=-1)
-            {
-                //scan is only possible on adjacent spaces
-                //Edge case: Scan target is same space as current node
-                if(currentLocation == min)
-                {
-                    int toMoveTo = SelectNextNodeRandom(currentLocation);
-                    Debug.Log($"Moving to node id {toMoveTo}");
-    
-                    gcr.TryMoveToNode(toMoveTo);
-                    currentLocation = toMoveTo;
-                    actionsLeft--;
-                }
-                else
-                {
-                    int movedist = gcr.GetPathLength(currentLocation,min);
-                    int[] toPrevNode = gcr.GetCappedPath(currentLocation,min,movedist-1);
-                    int prevNode = toPrevNode[^1];
-                    Debug.Log($"target {min}, Previous node {prevNode}");
-                    gcr.TryMoveToNode(prevNode);
-                    currentLocation = prevNode;
-                    Debug.Log($"Moving to node id {prevNode}");
-                    actionsLeft-=movedist-1;
-                }
-                gcr.TrySpecialAction(Node.GetNode(min));
-                Debug.Log($"Infecting node id {min}");
-                actionsLeft--;
-            }
-            else
-            {
-                // THis shouldn't happen since the game would already be won by this point.
-                int toMoveTo = SelectNextNodeRandom(currentLocation);
-                Debug.Log($"Moving to node id {toMoveTo}");
 
-                gcr.TryMoveToNode(toMoveTo);
-                currentLocation = toMoveTo;
-                actionsLeft--;
-            }
-            
+            curInfectTarget = min;
         }
-
-        gcr.ProgressTurn();
+        return curInfectTarget;
+    }
+    protected override void OnSpecialAction(int specActionTarget)
+    {
+        // Reset the current infection target after we perform the special action on it
+        if (specActionTarget == curInfectTarget)
+            curInfectTarget = -1;
+    }
+    protected override int GetMovementTarget()
+    {
+        GameController gcr = GameController.gameController;
+        //Edge case: Scan target is same space as current node
+        //scan is only possible on adjacent spaces
+        if(currentLocation == GetSpecialActionTarget())
+        {
+            int toMoveTo = SelectNextNodeRandom(currentLocation);
+            return toMoveTo;
+        }
+        else if (GetSpecialActionTarget() != -1)
+        {
+            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,GetSpecialActionTarget());
+            int rand_index = Random.Range(0, nodesTowards.Count);
+            int potential_target = nodesTowards[rand_index];
+            Debug.Log($"target node to infect is {GetSpecialActionTarget()}, heading to node {potential_target}");
+            return potential_target;
+        }
+        else
+        {
+            // This shouldn't happen since the game would already be won by this point.
+            int toMoveTo = SelectNextNodeRandom(currentLocation);
+            Debug.Log($"Moving to node id {toMoveTo}");
+            return toMoveTo;
+        }
     }
 }

@@ -2,57 +2,28 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System.Data.Common;
+using Unity.VisualScripting;
 
 public class GreedyAvoidTrojan : BotTemplate
 {
     public readonly float risk_factor = 0.01f; // Chance of risk-taking: will ignore avoidance with this frequency
     public readonly int avoid_dist = 2;
-    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
+    private int curInfectTarget = -1;
+    protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
-        int mapSizeSq = gcr.mapSize * gcr.mapSize;
-        int currentLocation = currentNodeID;
         List<int> targets = gcr.targetNodeIDs;
 
-        while(actionsLeft > 0)
-        {   
-            // First things first, if we're too close to the scanners, we should leave (depending on the risk factor)
-            if (gcr.GetDistFromHunters(currentLocation) <= avoid_dist && Random.value > risk_factor)
-            {
-                int toMoveTo = -1;
-                List<int> adjs = GameController.gameController.GetAdjacentNodes(currentNodeID,2).ToList();
-                bool flag = false;
-                while(!flag && adjs.Count > 0)
-                {
-                    //use random iteration to decide on a potential target.
-                    int rand_index = Random.Range(0, adjs.Count);
-                    int potential_target = adjs[rand_index];
-                    if(gcr.GetDistFromHunters(currentLocation) > avoid_dist)
-                    {
-                        toMoveTo = potential_target;
-                        flag = true;
-                    }
-                    else
-                    {
-                        adjs.Remove(potential_target);
-                    }
-                }
-                if (toMoveTo > 0 && toMoveTo <= mapSizeSq)
-                {
-                    Debug.Log($"Evading from scanner players to node id {toMoveTo}");
-                    int finalLocation = gcr.TryMoveToNode(toMoveTo);
-                    int movedist = gcr.GetPathLength(currentLocation,finalLocation);
-                    currentLocation = finalLocation;
-                    actionsLeft-=movedist;
-                }
-            }
-            //Iterate over each target, selecting the closest one
+        if (curInfectTarget == -1)
+        {
+            //Iterate over each target, selecting the closest one                
             int min = -1;
             int mindist = 9999;
             foreach (int tgt in targets)
             {
-                int pathLen = gcr.GetPathLength(currentNodeID,tgt);
-                if(gcr.infectedNodeIDs.Contains(tgt) || (gcr.GetDistFromHunters(tgt) <= avoid_dist && Random.value > risk_factor))
+                int pathLen = gcr.GetPathLength(currentLocation,tgt);
+                if(gcr.infectedNodeIDs.Contains(tgt))
                 {
                     // Skip ones that already are done.
                     continue;
@@ -63,48 +34,77 @@ public class GreedyAvoidTrojan : BotTemplate
                     min = tgt;
                 }
             }
-            if(min!=-1)
+
+            curInfectTarget = min;
+        }
+        return curInfectTarget;
+    }
+    protected override void OnSpecialAction(int specActionTarget)
+    {
+        // Reset the current infection target after we perform the special action on it
+        if (specActionTarget == curInfectTarget)
+            curInfectTarget = -1;
+    }
+    protected override int GetMovementTarget()
+    {
+        GameController gcr = GameController.gameController;
+
+        // First things first, if we're too close to the scanners, we should leave (depending on the risk factor)
+        if (gcr.GetDistFromHunters(currentLocation) <= avoid_dist && Random.value > risk_factor)
+        {
+            int toMoveTo = -1;
+            List<int> adjs = gcr.GetAdjacentNodes(currentLocation).ToList();
+            float[] adjsDist = adjs.Select(id=> gcr.GetDistFromHunters(id)).ToArray();
+            float minDist = adjsDist.Min();
+
+            for(int i = 0; i < adjs.Count; i++){
+                if(adjsDist[i] == minDist)
+                {
+                    toMoveTo = adjs[i];
+                }
+            }
+            if (gcr.NodeIsValid(toMoveTo))
             {
-                //Special action is only possible on adjacent spaces
-                //Edge case: Target is same space as current node
-                if(currentLocation == min)
-                {
-                    int toMoveTo = SelectNextNodeRandom(currentLocation);
-                    Debug.Log($"Moving to node id {toMoveTo}");
-    
-                    gcr.TryMoveToNode(toMoveTo);
-                    currentLocation = toMoveTo;
-                    actionsLeft--;
-                }
-                else
-                {
-                    int movedist = gcr.GetPathLength(currentLocation,min);
-                    int[] toPrevNode = gcr.GetCappedPath(currentLocation,min,movedist-1);
-                    int prevNode = toPrevNode[^1];
-                    Debug.Log($"target {min}, Previous node {prevNode}");
-                    
-                    gcr.TryMoveToNode(prevNode);
-                    currentLocation = prevNode;
-                    Debug.Log($"Moving to node id {prevNode}");
-                    actionsLeft-=(movedist-1);
-                }
-                gcr.TrySpecialAction(Node.GetNode(min));
-                Debug.Log($"Infecting node id {min}");
-                actionsLeft--;
+                Debug.Log($"Evading from scanner players to node id {toMoveTo}");
+                return toMoveTo;
+            }
+        }
+
+        //Edge case: Scan target is same space as current node
+        //scan is only possible on adjacent spaces
+        if(currentLocation == GetSpecialActionTarget())
+        {
+            int toMoveTo = SelectNextNodeRandom(currentLocation);
+            return toMoveTo;
+        }
+        else if (GetSpecialActionTarget() != -1)
+        {
+            int toMoveTo = -1;
+            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,GetSpecialActionTarget());
+
+            if (nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) > gcr.GetDistFromHunters(nodesTowards[1]) && Random.value > risk_factor)
+            {
+                toMoveTo = nodesTowards[1];
+            }
+            else if (nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) < gcr.GetDistFromHunters(nodesTowards[1]) && Random.value > risk_factor)
+            {
+                toMoveTo = nodesTowards[0];
             }
             else
             {
-                // THis shouldn't happen since the game would already be won by this point.
-                int toMoveTo = SelectNextNodeRandom(currentLocation);
-                Debug.Log($"Moving to node id {toMoveTo}");
-
-                gcr.TryMoveToNode(toMoveTo);
-                currentLocation = toMoveTo;
-                actionsLeft--;
+                int rand_index = Random.Range(0, nodesTowards.Count);
+                toMoveTo = nodesTowards[rand_index];
             }
-            
-        }
 
-        gcr.ProgressTurn();
+            Debug.Log($"target node to infect is {GetSpecialActionTarget()}, heading to node {toMoveTo}");
+            return toMoveTo;
+        }
+        else
+        {
+            // This shouldn't happen since the game would already be won by this point.
+            int toMoveTo = SelectNextNodeRandom(currentLocation);
+            Debug.Log($"Moving to node id {toMoveTo}");
+            return toMoveTo;
+        }
     }
 }

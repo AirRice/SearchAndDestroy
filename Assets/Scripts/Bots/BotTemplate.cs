@@ -4,6 +4,9 @@ using UnityEngine;
 public abstract class BotTemplate : ScriptableObject
 {
     protected bool isHiddenBot;
+    protected int currentLocation;
+    protected abstract int GetMovementTarget();
+    protected abstract int GetSpecialActionTarget();
     public void SetHidden(bool b)
     {
         isHiddenBot = b;
@@ -16,12 +19,50 @@ public abstract class BotTemplate : ScriptableObject
             Debug.Log($"Warning: Player {playerID} is not a valid target for {GetType().Name}.");
             return;
         }
-        HandleTurn(playerID, currentNodeID, actionsLeft);
+        currentLocation = currentNodeID;
+        HandleTurn(playerID, actionsLeft);
+
+        GameController gcr = GameController.gameController;
+        for(int i = 0; i < actionsLeft; i++)
+        {
+            int moveTarget = GetMovementTarget();
+            int specActionTarget = GetSpecialActionTarget();
+            
+            if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
+            {
+                gcr.TrySpecialAction(Node.GetNode(specActionTarget));
+                Debug.Log($"Infecting node id {specActionTarget}");
+                OnSpecialAction(specActionTarget);
+                continue;
+            }
+            else if (!isHiddenBot && currentLocation == specActionTarget)
+            {
+                gcr.TrySpecialAction();
+                Debug.Log($"Scanning at node id {specActionTarget}");
+                OnSpecialAction(specActionTarget);
+                continue;
+            }
+
+            if(moveTarget != -1)
+            {
+                gcr.TryMoveToNode(moveTarget);
+                currentLocation = moveTarget;
+                Debug.Log($"Moving to node id {moveTarget}");
+            }
+        }
+        gcr.ProgressTurn();
     }
-    public abstract void HandleTurn(int playerID, int currentNodeID, int actionsLeft);
-    public int SelectNextNodeRandom(int currentNodeID)
+    protected virtual void OnSpecialAction(int specActionTarget)
     {
-        int[] adjs = GameController.gameController.GetAdjacentNodes(currentNodeID);
+        return;
+    }
+    protected virtual void HandleTurn(int playerID, int maxActionsLeft){
+        return;
+    }
+
+    public int SelectNextNodeRandom(int currentNodeID, int range = 1)
+    {
+        int[] adjs = GameController.gameController.GetAdjacentNodes(currentNodeID, range);
         return adjs[Random.Range(0,adjs.Length)];
     }
     public bool RandomBool(float prob = 0.5f)
