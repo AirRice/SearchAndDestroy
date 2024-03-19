@@ -92,11 +92,13 @@ public class SettingsHud : MonoBehaviour
     }
     private void PlayerCountOnChanged(ChangeEvent<int> evt)
     {
-        int max = evt.newValue >= evt.previousValue ? evt.newValue : evt.previousValue;
-        int min = evt.newValue >= evt.previousValue ? evt.previousValue : evt.newValue;
+        if (evt.newValue == evt.previousValue)
+            return;
+        int max = evt.newValue > evt.previousValue ? evt.newValue : evt.previousValue;
+        int min = evt.newValue > evt.previousValue ? evt.previousValue : evt.newValue;
         for(int i = 0; i < max; i++)
         {
-            if(i <= min)
+            if(i < min)
             {
                 botDropdownList[i].style.visibility = Visibility.Visible;
             }
