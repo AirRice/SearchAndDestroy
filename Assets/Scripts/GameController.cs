@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using System.Linq;
 using Random = UnityEngine.Random;
-
 public class GameController : MonoBehaviour
 {
     public static GameController gameController;
@@ -497,7 +496,25 @@ public class GameController : MonoBehaviour
         }
         return closestNodes;
     }
-
+    public List<int> GetDestsClosestToAdjs(int sourceID, int[] selectedAdjs)
+    {
+        int[] adjs = GetAdjacentNodes(sourceID);
+        if (adjs.Length > 2 || adjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
+        {
+            return new List<int>();
+        }
+        List<int> possibleNodes = new();
+        for(int i = 1; i <= mapSize*mapSize; i++)
+        {
+            int minDist = adjs.Select(id => GetPathLength(id, i)).Min();
+            int[] closestAdjs = adjs.Where(adj => GetPathLength(adj, i) == minDist).ToArray();
+            if(closestAdjs.Intersect(selectedAdjs).ToArray().Length == selectedAdjs.Length)
+            {
+                possibleNodes.Add(i);
+            }
+        }
+        return possibleNodes;
+    }
     public void UpdateActivePlayerPosition(int destID)
     {
         PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();
