@@ -410,11 +410,7 @@ public class GameController : MonoBehaviour
             }
             if (isAdjacent)
             {
-                currentPlayerMoves--;
-                if(logToCSV)
-                {
-                    FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{thisNode.nodeID}");
-                }        
+                currentPlayerMoves--; 
                 currentPlayerDidSpecialAction = true;
                 gameHud.playerActionButtonDown = false;
                 TryNodeInfect(thisNode);
@@ -438,6 +434,10 @@ public class GameController : MonoBehaviour
         lastInfectedNode = toInfect.nodeID;
         infectedNodeIDs.Add(toInfect.nodeID);
         toInfect.Infect();
+        if(logToCSV)
+        {
+            FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
+        }    
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
@@ -478,6 +478,10 @@ public class GameController : MonoBehaviour
             textPopup.transform.position = transform.position = Node.GetNode(i).transform.position + offset;
             textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);
         }
+        if(logToCSV)
+        {
+            FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
+        }    
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
     }
