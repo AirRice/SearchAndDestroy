@@ -25,9 +25,7 @@ public abstract class BotTemplate : ScriptableObject
         GameController gcr = GameController.gameController;
         for(int i = 0; i < actionsLeft; i++)
         {
-            int moveTarget = GetMovementTarget();
             int specActionTarget = GetSpecialActionTarget();
-            
             if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
             {
                 gcr.TrySpecialAction(Node.GetNode(specActionTarget));
@@ -42,17 +40,27 @@ public abstract class BotTemplate : ScriptableObject
                 OnSpecialAction(specActionTarget);
                 continue;
             }
-
+            int moveTarget = GetMovementTarget();
             if(moveTarget != -1)
             {
                 gcr.TryMoveToNode(moveTarget);
                 currentLocation = moveTarget;
                 Debug.Log($"Moving to node id {moveTarget}");
+                OnMove(moveTarget);
             }
         }
+        OnPlayerTurnEnd();
         gcr.ProgressTurn();
     }
+    protected virtual void OnPlayerTurnEnd()
+    {
+        return;
+    }
     protected virtual void OnSpecialAction(int specActionTarget)
+    {
+        return;
+    }
+    protected virtual void OnMove(int moveTarget)
     {
         return;
     }

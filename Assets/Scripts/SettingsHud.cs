@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
 using UnityEngine.SceneManagement;
 using System.Linq;
 public class SettingsHud : MonoBehaviour
@@ -12,7 +11,7 @@ public class SettingsHud : MonoBehaviour
     private SliderInt playerCountSlider;
     private SliderInt movesCountSlider;
     private SliderInt maxTurnsSlider;
-    private IntegerField maxRoundsField;
+    private TextField maxRoundsField;
     private Toggle hotSeatToggle;
     private Toggle logToCSVToggle;
     private Toggle smoothMoveToggle;
@@ -28,7 +27,7 @@ public class SettingsHud : MonoBehaviour
         movesCountSlider = root.Q<SliderInt>("movesCountSlider");
         maxTurnsSlider = root.Q<SliderInt>("maxTurnsSlider");
 
-        maxRoundsField = root.Q<IntegerField>("maxRoundsField");
+        maxRoundsField = root.Q<TextField>("maxRoundsField");
 
         hotSeatToggle = root.Q<Toggle>("hotSeatToggle");
         logToCSVToggle = root.Q<Toggle>("logToCSVToggle");   
@@ -49,7 +48,7 @@ public class SettingsHud : MonoBehaviour
         {
             botDropdownList[i].choices = i == 0 ? trojanModes : scannerModes;
         }
-    
+        maxRoundsField.RegisterCallback<ChangeEvent<string>>(MaxRoundsFieldOnChanged);
         buttonStartGame.RegisterCallback<ClickEvent>(StartGameOnClicked);
         playerCountSlider.RegisterValueChangedCallback(PlayerCountOnChanged);
     }
@@ -62,7 +61,7 @@ public class SettingsHud : MonoBehaviour
         playerCountSlider.SetValueWithoutNotify(cfg.playersCount);
         movesCountSlider.SetValueWithoutNotify(cfg.movesCount);
         maxTurnsSlider.SetValueWithoutNotify(cfg.maxTurnCount);
-        maxRoundsField.SetValueWithoutNotify(cfg.maxRoundCount);
+        maxRoundsField.SetValueWithoutNotify(cfg.maxRoundCount.ToString());
         hotSeatToggle.SetValueWithoutNotify(cfg.hotSeatMode);
         logToCSVToggle.SetValueWithoutNotify(cfg.logToCSV);
         smoothMoveToggle.SetValueWithoutNotify(cfg.useSmoothMove);
@@ -72,6 +71,13 @@ public class SettingsHud : MonoBehaviour
             botDropdownList[i].SetValueWithoutNotify(cfg.playerBotType[i]);
         }
     }
+    private void MaxRoundsFieldOnChanged(ChangeEvent<string> evt)
+    {
+        if (!int.TryParse(evt.newValue, out _))
+        {
+            maxRoundsField.SetValueWithoutNotify(evt.previousValue);
+        }
+    }
     private void StartGameOnClicked(ClickEvent evt)
     {
         ConfigData cfg = new ConfigData(
@@ -79,7 +85,7 @@ public class SettingsHud : MonoBehaviour
             playerCountSlider.value, 
             movesCountSlider.value, 
             maxTurnsSlider.value,
-            maxRoundsField.value,
+            int.Parse(maxRoundsField.value),
             maxObjectivesSlider.value,
             hotSeatToggle.value,
             logToCSVToggle.value,

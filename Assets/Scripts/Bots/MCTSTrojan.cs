@@ -4,8 +4,13 @@ using UnityEngine;
 
 public class MCTSTrojan : BotTemplate
 {
-    public override void HandleTurn(int playerID, int currentNodeID, int actionsLeft)
+    protected override int GetMovementTarget()
     {
-        GameController gcr = GameController.gameController;
+        throw new System.NotImplementedException();
+    }
+
+    protected override int GetSpecialActionTarget()
+    {
+        throw new System.NotImplementedException();
     }
 }

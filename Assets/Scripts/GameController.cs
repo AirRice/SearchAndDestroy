@@ -510,6 +510,10 @@ public class GameController : MonoBehaviour
         List<int> possibleNodes = new();
         for(int i = 1; i <= mapSize*mapSize; i++)
         {
+            if (i == sourceID)
+            {
+                continue;
+            }
             int minDist = adjs.Select(id => GetPathLength(id, i)).Min();
             int[] closestAdjs = adjs.Where(adj => GetPathLength(adj, i) == minDist).ToArray();
             if(closestAdjs.Intersect(selectedAdjs).ToArray().Length == selectedAdjs.Length)
@@ -549,8 +553,9 @@ public class GameController : MonoBehaviour
             return;
         if(infectedNodeIDs.Contains(GetActivePlayerPosition()))
         // Don't let them end the turn if they're on an infected node: stop stalling
+        // Disabled for now as it was causing errors if a bot lands on the infected node
         {
-            return;    
+            //return;    
         }
         if(increment)
         {
@@ -580,6 +585,10 @@ public class GameController : MonoBehaviour
         // Only handle hidden player if one *IS* the hidden player
         if(currentTurnPlayer==0)
         {
+            // Reset the per turn player index for the algorithms
+            SharedScan.algoPlayerInTurn = 0;
+            CollabScan.algoPlayerInTurn = 0;
+            CollabScan.algoPlayerLocs = new();
             this.StartHiddenTurn();
         }
         else if(localPlayerID != 0)
@@ -702,6 +711,26 @@ public class GameController : MonoBehaviour
         //Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
     }
+    
+    public int GetCentreNode(int[] nodes)
+    {
+        //Given some nodes of the graph calculate the centroid point
+        //turn the node ids into coordinates
+        (int,int,int)[] nodes_coords = nodes.Select(id => (id,(id-1)%mapSize,(id-1)/mapSize)).ToArray();
+        int sumX = 0;
+        int sumY = 0;
+        foreach ((int,int,int) node in nodes_coords)
+        {
+            sumX += node.Item2;
+            sumY += node.Item3;
+        }
+        // find centre point.
+        int centreX = sumX / nodes_coords.Length;
+        int centreY = sumY / nodes_coords.Length;
+
+        return (centreY-1) * mapSize + centreX;
+    }
+
     public bool NodeIsValid(int nodeID){
         return (nodeID <= mapSize*mapSize && nodeID > 0);
     }
