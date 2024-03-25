@@ -481,6 +481,10 @@ public class GameController : MonoBehaviour
     {
         if(toTrack.nodeID == hiddenPlayerLocation)
         {
+            if(logToCSV)
+            {
+                FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{hiddenPlayerLocation}");
+            }    
             EndGame(false);
             return;
         }
