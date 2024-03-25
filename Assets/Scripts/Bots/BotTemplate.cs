@@ -40,7 +40,7 @@ public abstract class BotTemplate : ScriptableObject
                 OnSpecialAction(specActionTarget);
                 continue;
             }
-            int moveTarget = GetMovementTarget();
+            int moveTarget = GetMovementTarget(specActionTarget);
             if(moveTarget != -1)
             {
                 gcr.TryMoveToNode(moveTarget);

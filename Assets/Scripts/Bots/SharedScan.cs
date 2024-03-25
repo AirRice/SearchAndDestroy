@@ -57,10 +57,9 @@ public class SharedScan : BotTemplate
         }
     }
     
-    protected override int GetMovementTarget()
+    protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
-        int specActionTarget = GetSpecialActionTarget()
         if (specActionTarget != -1)
         {
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
