@@ -128,6 +128,12 @@ public class GameController : MonoBehaviour
         }
         this.SetupBoard();
         this.SetupBotPlayers();
+
+        if (logToCSV)
+        {
+            // Log the selected objectives using action 2
+            FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
+        }
         // Find marked spawns for each team
         try
         {
@@ -331,6 +337,14 @@ public class GameController : MonoBehaviour
             newPlayer.playerID = i;
             newPlayer.setNode(hunterPlayerLocations[i-1],false);
             playerPiecesList.Add(newPlayer);
+        }
+        if (logToCSV)
+        {
+            // Log starting positions of players: Action 3
+            for(int i = 0; i<playersCount; i++)
+            {
+                FileLogger.mainInstance.WriteLineToLog($"|{i}|3|{i==0 ? hiddenPlayerLocation : hunterPlayerLocations[i-1]}|");
+            }
         }
         ProgressTurn(false);
     }
