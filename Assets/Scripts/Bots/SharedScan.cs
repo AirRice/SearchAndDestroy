@@ -60,13 +60,13 @@ public class SharedScan : BotTemplate
     protected override int GetMovementTarget()
     {
         GameController gcr = GameController.gameController;
-
-        if (GetSpecialActionTarget() != -1)
+        int specActionTarget = GetSpecialActionTarget()
+        if (specActionTarget != -1)
         {
-            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,GetSpecialActionTarget());
+            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            Debug.Log($"target node to scan is {GetSpecialActionTarget()}, heading to node {potential_target}");
+            Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
             return potential_target;
         }
         else
