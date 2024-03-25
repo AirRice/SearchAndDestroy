@@ -40,22 +40,22 @@ public class GreedyTrojan : BotTemplate
         if (specActionTarget == curInfectTarget)
             curInfectTarget = -1;
     }
-    protected override int GetMovementTarget()
+    protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
         //Edge case: Scan target is same space as current node
         //scan is only possible on adjacent spaces
-        if(currentLocation == GetSpecialActionTarget())
+        if(currentLocation == specActionTarget)
         {
             int toMoveTo = SelectNextNodeRandom(currentLocation);
             return toMoveTo;
         }
-        else if (GetSpecialActionTarget() != -1)
+        else if (specActionTarget != -1)
         {
-            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,GetSpecialActionTarget());
+            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            Debug.Log($"target node to infect is {GetSpecialActionTarget()}, heading to node {potential_target}");
+            Debug.Log($"target node to infect is {specActionTarget}, heading to node {potential_target}");
             return potential_target;
         }
         else

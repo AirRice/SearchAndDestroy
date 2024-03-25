@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class MCTSTrojan : BotTemplate
 {
-    protected override int GetMovementTarget()
+    protected override int GetMovementTarget(int specActionTarget)
     {
         throw new System.NotImplementedException();
     }

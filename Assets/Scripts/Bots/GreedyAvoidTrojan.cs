@@ -45,7 +45,7 @@ public class GreedyAvoidTrojan : BotTemplate
         if (specActionTarget == curInfectTarget)
             curInfectTarget = -1;
     }
-    protected override int GetMovementTarget()
+    protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
 
@@ -72,15 +72,15 @@ public class GreedyAvoidTrojan : BotTemplate
 
         //Edge case: Scan target is same space as current node
         //scan is only possible on adjacent spaces
-        if(currentLocation == GetSpecialActionTarget())
+        if(currentLocation == specActionTarget)
         {
             int toMoveTo = SelectNextNodeRandom(currentLocation);
             return toMoveTo;
         }
-        else if (GetSpecialActionTarget() != -1)
+        else if (specActionTarget != -1)
         {
             int toMoveTo = -1;
-            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,GetSpecialActionTarget());
+            List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
 
             if (nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) > gcr.GetDistFromHunters(nodesTowards[1]) && Random.value > risk_factor)
             {
@@ -96,7 +96,7 @@ public class GreedyAvoidTrojan : BotTemplate
                 toMoveTo = nodesTowards[rand_index];
             }
 
-            Debug.Log($"target node to infect is {GetSpecialActionTarget()}, heading to node {toMoveTo}");
+            Debug.Log($"target node to infect is {specActionTarget}, heading to node {toMoveTo}");
             return toMoveTo;
         }
         else

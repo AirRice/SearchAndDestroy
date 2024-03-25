@@ -5,7 +5,7 @@ public abstract class BotTemplate : ScriptableObject
 {
     protected bool isHiddenBot;
     protected int currentLocation;
-    protected abstract int GetMovementTarget();
+    protected abstract int GetMovementTarget(int specActionTarget);
     protected abstract int GetSpecialActionTarget();
     public void SetHidden(bool b)
     {

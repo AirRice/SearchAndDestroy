@@ -343,7 +343,7 @@ public class GameController : MonoBehaviour
             // Log starting positions of players: Action 3
             for(int i = 0; i<playersCount; i++)
             {
-                FileLogger.mainInstance.WriteLineToLog($"|{i}|3|{i==0 ? hiddenPlayerLocation : hunterPlayerLocations[i-1]}|");
+                FileLogger.mainInstance.WriteLineToLog($"|{i}|3|{(i==0 ? hiddenPlayerLocation : hunterPlayerLocations[i-1])}|");
             }
         }
         ProgressTurn(false);
@@ -548,7 +548,8 @@ public class GameController : MonoBehaviour
         {
             hunterPlayerLocations[currentTurnPlayer-1] = destID;
         }
-        currentPlayerPiece.setNode(destID,useSmoothMove);
+        if (currentPlayerPiece != null)
+            currentPlayerPiece.setNode(destID,useSmoothMove);
     }
     public int GetActivePlayerPosition()
     {
