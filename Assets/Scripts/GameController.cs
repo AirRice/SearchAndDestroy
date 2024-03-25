@@ -720,8 +720,14 @@ public class GameController : MonoBehaviour
             }
         }
         for(int j=1;j<=maxdist;j++){
-            connectedNodes.Add(nodeID - j);
-            connectedNodes.Add(nodeID + j);
+            if(nodeID % mapSize > j)
+            {
+                connectedNodes.Add(nodeID - j);
+            }
+            else if(mapSize - (nodeID % mapSize) >= j)
+            {
+                connectedNodes.Add(nodeID + j);
+            }
         }
         //Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
