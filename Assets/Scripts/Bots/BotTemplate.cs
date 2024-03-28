@@ -28,16 +28,21 @@ public abstract class BotTemplate : ScriptableObject
             int specActionTarget = GetSpecialActionTarget();
             if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
             {
-                gcr.TrySpecialAction(Node.GetNode(specActionTarget));
                 Debug.Log($"Infecting node id {specActionTarget}");
                 OnSpecialAction(specActionTarget);
+                if (gcr.TrySpecialAction(Node.GetNode(specActionTarget))) {
+                    return;
+                }
+                
                 continue;
             }
             else if (!isHiddenBot && currentLocation == specActionTarget)
             {
-                gcr.TrySpecialAction();
                 Debug.Log($"Scanning at node id {specActionTarget}");
                 OnSpecialAction(specActionTarget);
+                if (gcr.TrySpecialAction()) {
+                    return;
+                }
                 continue;
             }
             int moveTarget = GetMovementTarget(specActionTarget);

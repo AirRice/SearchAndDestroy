@@ -400,12 +400,12 @@ public class GameController : MonoBehaviour
             }
         }
     }
-    public void TrySpecialAction(Node thisNode = null)
+    public bool TrySpecialAction(Node thisNode = null)
     {
         if(currentPlayerMoves < 1)
-            return;
+            return false;
         if (currentTurnPlayer == 0 && currentPlayerDidSpecialAction)
-            return;
+            return false;
         Node playerNode = Node.GetNode(GetActivePlayerPosition());
         if(thisNode == null)
         {
@@ -427,7 +427,7 @@ public class GameController : MonoBehaviour
                 currentPlayerMoves--; 
                 currentPlayerDidSpecialAction = true;
                 gameHud.playerActionButtonDown = false;
-                TryNodeInfect(thisNode);
+                return TryNodeInfect(thisNode);
             }
         }
         else
@@ -437,12 +437,13 @@ public class GameController : MonoBehaviour
             currentPlayerMoves--;
             // Currently testing the "track" action. This will be handled immediately from the GameHud
             //TryNodeScan(thisNode);
-            TryNodeTrack(playerNode);
+            return TryNodeTrack(playerNode);
         }
+        return false;
     }
 
     //Infect the specified node. (Trojan Player only)
-    public void TryNodeInfect(Node toInfect)
+    public bool TryNodeInfect(Node toInfect)
     {
         nodeWasInfectedLastTurn = true;
         lastInfectedNode = toInfect.nodeID;
@@ -455,8 +456,9 @@ public class GameController : MonoBehaviour
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
+            return true;
         }
-
+        return false;
     }
 
     //Scan the specified node and receive the distance (Scanner Players)
@@ -477,7 +479,7 @@ public class GameController : MonoBehaviour
             return;
         }       
     }*/
-    public void TryNodeTrack(Node toTrack)
+    public bool TryNodeTrack(Node toTrack)
     {
         if(toTrack.nodeID == hiddenPlayerLocation)
         {
@@ -486,7 +488,7 @@ public class GameController : MonoBehaviour
                 FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{hiddenPlayerLocation}");
             }    
             EndGame(false);
-            return;
+            return true;
         }
         List<int> closestNodes = GetClosestAdjToDest(toTrack.nodeID, hiddenPlayerLocation);
         Vector3 offset = new(0,0.55f,0);
@@ -502,6 +504,7 @@ public class GameController : MonoBehaviour
         }    
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
+        return false;
     }
     public List<int> GetClosestAdjToDest(int sourceID, int destID)
     {
