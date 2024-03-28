@@ -31,7 +31,7 @@ public abstract class BotTemplate : ScriptableObject
                 Debug.Log($"Infecting node id {specActionTarget}");
                 OnSpecialAction(specActionTarget);
                 if (gcr.TrySpecialAction(Node.GetNode(specActionTarget))) {
-                    return;
+                    break;
                 }
                 
                 continue;
@@ -41,7 +41,7 @@ public abstract class BotTemplate : ScriptableObject
                 Debug.Log($"Scanning at node id {specActionTarget}");
                 OnSpecialAction(specActionTarget);
                 if (gcr.TrySpecialAction()) {
-                    return;
+                    break;
                 }
                 continue;
             }

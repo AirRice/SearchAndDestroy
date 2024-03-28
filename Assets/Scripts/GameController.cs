@@ -727,7 +727,7 @@ public class GameController : MonoBehaviour
             }
         }
         for(int j=1;j<=maxdist;j++){
-            if(nodeID % mapSize > j)
+            if(nodeID % mapSize > j || nodeID % mapSize == 0)
             {
                 connectedNodes.Add(nodeID - j);
             }
