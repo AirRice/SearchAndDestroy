@@ -731,7 +731,7 @@ public class GameController : MonoBehaviour
             {
                 connectedNodes.Add(nodeID - j);
             }
-            else if(mapSize - (nodeID % mapSize) >= j)
+            if(mapSize - (nodeID % mapSize) >= j)
             {
                 connectedNodes.Add(nodeID + j);
             }
