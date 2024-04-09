@@ -517,7 +517,7 @@ public class GameController : MonoBehaviour
     public List<int> GetDestsClosestToAdjs(int sourceID, int[] selectedAdjs)
     {
         int[] adjs = GetAdjacentNodes(sourceID);
-        if (adjs.Length > 2 || adjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
+        if (selectedAdjs.Length > 2 || selectedAdjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
         {
             return new List<int>();
         }
