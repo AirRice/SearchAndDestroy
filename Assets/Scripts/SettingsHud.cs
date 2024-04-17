@@ -36,7 +36,7 @@ public class SettingsHud : MonoBehaviour
         buttonStartGame = root.Q<Button>("buttonStartGame");
  
         // Update this for when algorithms get added later
-        List<string> trojanModes = new() { "GreedyTrojan", "GreedyAvoidTrojan", "HumanPlayer"};
+        List<string> trojanModes = new() { "GreedyTrojan", "GreedyAvoidTrojan", "MCTSTrojan", "HumanPlayer"};
         List<string> scannerModes = new() { "SoloScan", "SharedScan", "CollabScan", "HumanPlayer"};
 
         botDropdownList.Add(root.Q<DropdownField>("trojanBotDropdown"));
@@ -101,10 +101,9 @@ public class SettingsHud : MonoBehaviour
         if (evt.newValue == evt.previousValue)
             return;
         int max = evt.newValue > evt.previousValue ? evt.newValue : evt.previousValue;
-        int min = evt.newValue > evt.previousValue ? evt.previousValue : evt.newValue;
         for(int i = 0; i < max; i++)
         {
-            if(i < min)
+            if(i < evt.newValue)
             {
                 botDropdownList[i].style.visibility = Visibility.Visible;
             }
