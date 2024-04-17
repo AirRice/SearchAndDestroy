@@ -52,6 +52,7 @@ public class GameController : MonoBehaviour
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
+    private int runNumber = 0;
     private void Awake()
     {
         //enforce singleton
@@ -65,7 +66,7 @@ public class GameController : MonoBehaviour
     void Start()
     {   
         gameHud = gameObject.GetComponent<GameHud>();
-        ConfigData cfg = LoadData.Load();
+        ConfigData cfg = LoadData.Load().configList[runNumber];
 
         mapSize = cfg.mapSize;
         playersCount = cfg.playersCount;
@@ -187,8 +188,16 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            PlayerPrefs.SetInt("RoundsCount", 0);
-            Quit();
+            runNumber++;
+            if (LoadData.Load().configList.Length <= runNumber)
+            {
+                Quit();
+            }
+            else
+            {
+                FileLogger.mainInstance.Reset();
+                GameController.gameController.StartGame(true);
+            }
         }
     }
 

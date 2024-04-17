@@ -20,6 +20,13 @@ public class FileLogger : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    public void Reset()
+    // Resets the various values so the logging starts again on a new file.
+    {
+        headerDone = false;
+        filePath = null;
+        roundCount = 0;
+    }
     // Returns the file path string. Called when awaken only.
     private string GetLogPath()
     {

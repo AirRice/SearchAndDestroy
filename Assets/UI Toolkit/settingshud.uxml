@@ -1,21 +1,32 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
     <Style src="project://database/Assets/UI%20Toolkit/sliderfix.uss?fileID=7433441132597879392&amp;guid=a137541780f83164abe58c2e76339bf2&amp;type=3#sliderfix" />
-    <ui:VisualElement name="menuBackground" style="max-width: 800px; max-height: 1400px; background-color: rgb(91, 88, 88);">
-        <ui:SliderInt picking-mode="Ignore" label="Map Size" value="5" high-value="20" name="mapSizeSlider" low-value="3" show-input-field="true" style="font-size: 16px;" />
-        <ui:SliderInt picking-mode="Ignore" label="Max Objective Pairs " value="3" high-value="10" name="maxObjectivesSlider" show-input-field="true" low-value="1" style="font-size: 16px;" />
-        <ui:SliderInt picking-mode="Ignore" label="Player Count" value="3" high-value="5" low-value="2" show-input-field="true" name="playerCountSlider" style="font-size: 16px;" />
-        <ui:SliderInt picking-mode="Ignore" label="Max Actions Per Turn" value="3" high-value="10" name="movesCountSlider" show-input-field="true" low-value="3" />
-        <ui:SliderInt picking-mode="Ignore" label="Max Turns Per Round" value="30" high-value="100" name="maxTurnsSlider" show-input-field="true" />
-        <ui:TextField picking-mode="Ignore" label="Max Rounds to Simulate" value="1000" text="1000" name="maxRoundsField" style="font-size: 14px;" />
-        <ui:Toggle label="Hot Seat Mode" name="hotSeatToggle" value="true" style="font-size: 16px;" />
-        <ui:Toggle label="Log to CSV" name="logToCSVToggle" value="true" style="font-size: 16px;" />
-        <ui:Toggle label="Smooth Movement" name="smoothMoveToggle" style="font-size: 16px;" />
-        <ui:Label text="Algorithm Settings" display-tooltip-when-elided="true" style="font-size: 20px;" />
-        <ui:DropdownField label="Trojan Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="trojanBotDropdown" />
-        <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot1Dropdown" />
-        <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot2Dropdown" style="display: flex;" />
-        <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot3Dropdown" style="display: flex; opacity: 1; visibility: hidden;" />
-        <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot4Dropdown" style="display: flex; visibility: hidden;" />
-        <ui:Button text="Simulate" display-tooltip-when-elided="true" name="buttonStartGame" style="width: 30%; left: 35%; font-size: 24px;" />
+    <ui:VisualElement style="flex-direction: row; justify-content: flex-start;">
+        <ui:VisualElement name="menuBackground" style="max-width: 800px; max-height: 1400px; background-color: rgb(91, 88, 88); width: 500px; color: rgb(255, 255, 255);">
+            <ui:SliderInt picking-mode="Ignore" label="Map Size" value="5" high-value="20" name="mapSizeSlider" low-value="3" show-input-field="true" style="font-size: 16px;" />
+            <ui:SliderInt picking-mode="Ignore" label="Max Objective Pairs " value="3" high-value="10" name="maxObjectivesSlider" show-input-field="true" low-value="1" style="font-size: 16px;" />
+            <ui:SliderInt picking-mode="Ignore" label="Player Count" value="3" high-value="5" low-value="2" show-input-field="true" name="playerCountSlider" style="font-size: 16px;" />
+            <ui:SliderInt picking-mode="Ignore" label="Max Actions Per Turn" value="3" high-value="10" name="movesCountSlider" show-input-field="true" low-value="3" />
+            <ui:SliderInt picking-mode="Ignore" label="Max Turns Per Round" value="30" high-value="100" name="maxTurnsSlider" show-input-field="true" />
+            <ui:TextField picking-mode="Ignore" label="Max Rounds to Simulate" value="1000" text="1000" name="maxRoundsField" style="font-size: 14px;" />
+            <ui:Toggle label="Hot Seat Mode" name="hotSeatToggle" value="true" style="font-size: 16px;" />
+            <ui:Toggle label="Log to CSV" name="logToCSVToggle" value="true" style="font-size: 16px;" />
+            <ui:Toggle label="Smooth Movement" name="smoothMoveToggle" style="font-size: 16px;" />
+            <ui:Label text="Algorithm Settings" display-tooltip-when-elided="true" style="font-size: 20px;" />
+            <ui:DropdownField label="Trojan Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="trojanBotDropdown" />
+            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot1Dropdown" />
+            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot2Dropdown" style="display: flex;" />
+            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot3Dropdown" style="display: flex; opacity: 1; visibility: hidden;" />
+            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot4Dropdown" style="display: flex; visibility: hidden;" />
+            <ui:VisualElement style="flex-direction: row; justify-content: space-around; align-items: stretch;">
+                <ui:Button text="Add New" display-tooltip-when-elided="true" name="buttonAddRun" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(45, 45, 45);" />
+                <ui:Button text="Remove" display-tooltip-when-elided="true" name="buttonRemoveRun" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(45, 45, 45);" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement style="width: 256px;">
+            <ui:ScrollView style="width: auto; height: 50%; flex-direction: column;">
+                <ui:RadioButtonGroup label="Runs" value="-1" name="radioGroupSelectRun" />
+            </ui:ScrollView>
+        </ui:VisualElement>
     </ui:VisualElement>
+    <ui:Button text="Simulate" display-tooltip-when-elided="true" name="buttonStartGame" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(43, 43, 43); color: rgb(255, 255, 255);" />
 </ui:UXML>

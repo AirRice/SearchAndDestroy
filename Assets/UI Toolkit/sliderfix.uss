@@ -1,3 +1,9 @@
 .unity-base-slider .unity-base-slider__input .unity-base-text-field .unity-base-text-field__input {
     padding: 0 0 0 0;
 }
+.unity-text-field__input {
+    background-color: rgb(51, 51, 51);
+}
+.unity-popup-field__input {
+    background-color: rgb(51, 51, 51);
+}

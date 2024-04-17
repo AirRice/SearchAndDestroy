@@ -5,20 +5,25 @@ using UnityEngine;
 public class LoadData : MonoBehaviour
 {
     private static readonly string filePath = System.IO.Path.Combine(Application.dataPath, "config.json");
-    public static ConfigData Load(){
+    public static ConfigDataList Load(){
         
         Debug.Log(filePath);
         string data = System.IO.File.ReadAllText(filePath);
-        ConfigData cfgData = JsonUtility.FromJson<ConfigData>(data);
-        return cfgData;
+        ConfigDataList cfglist = JsonUtility.FromJson<ConfigDataList>(data);
+        return cfglist;
     }
-    public static void Save(ConfigData cfgData)
+    public static void Save(ConfigDataList cfgData)
     {
         string jsonString = JsonUtility.ToJson(cfgData);
+        Debug.Log(jsonString);
         System.IO.File.WriteAllText(filePath, jsonString);
     }
 }
 
+[System.Serializable]
+public class ConfigDataList{
+    public ConfigData[] configList = {};
+}
 [System.Serializable]
 public class ConfigData{
     public int mapSize;
@@ -31,6 +36,20 @@ public class ConfigData{
     public bool logToCSV;
     public bool useSmoothMove;
     public string[] playerBotType;
+
+    public ConfigData()
+    {
+        mapSize = 3;
+        playersCount = 3;
+        movesCount = 3;
+        maxTurnCount = 15;
+        maxRoundCount = 100;
+        maxObjectives = 2;
+        hotSeatMode = true;
+        logToCSV = false;
+        useSmoothMove = true;
+        playerBotType = new string[] { "", "", "" };
+    }
 
     public ConfigData(
         int mapSize,

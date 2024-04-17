@@ -16,8 +16,11 @@ public class SettingsHud : MonoBehaviour
     private Toggle logToCSVToggle;
     private Toggle smoothMoveToggle;
     private List<DropdownField> botDropdownList = new();
+    private RadioButtonGroup radioButtonGroupSelectRun;
     private Button buttonStartGame;
-
+    private Button buttonAddRun;
+    private Button buttonRemoveRun;
+    private List<ConfigData> cfgList = new();
     private void OnEnable()
     {
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
@@ -34,7 +37,10 @@ public class SettingsHud : MonoBehaviour
         smoothMoveToggle = root.Q<Toggle>("smoothMoveToggle");
 
         buttonStartGame = root.Q<Button>("buttonStartGame");
- 
+        buttonAddRun = root.Q<Button>("buttonAddRun");
+        buttonRemoveRun = root.Q<Button>("buttonRemoveRun");
+
+        radioButtonGroupSelectRun = root.Q<RadioButtonGroup>("radioGroupSelectRun");
         // Update this for when algorithms get added later
         List<string> trojanModes = new() { "GreedyTrojan", "GreedyAvoidTrojan", "MCTSTrojan", "HumanPlayer"};
         List<string> scannerModes = new() { "SoloScan", "SharedScan", "CollabScan", "HumanPlayer"};
@@ -50,26 +56,32 @@ public class SettingsHud : MonoBehaviour
         }
         maxRoundsField.RegisterCallback<ChangeEvent<string>>(MaxRoundsFieldOnChanged);
         buttonStartGame.RegisterCallback<ClickEvent>(StartGameOnClicked);
+        radioButtonGroupSelectRun.RegisterValueChangedCallback(SelectRunOnChanged);
+        buttonAddRun.RegisterCallback<ClickEvent>(AddRunOnClicked);
+        buttonRemoveRun.RegisterCallback<ClickEvent>(RemoveRunOnClicked);
         playerCountSlider.RegisterValueChangedCallback(PlayerCountOnChanged);
     }
     // Start is called before the first frame update
     void Start()
     {
-        ConfigData cfg = LoadData.Load();
-        mapSizeSlider.SetValueWithoutNotify(cfg.mapSize);
-        maxObjectivesSlider.SetValueWithoutNotify(cfg.maxObjectives);
-        playerCountSlider.SetValueWithoutNotify(cfg.playersCount);
-        movesCountSlider.SetValueWithoutNotify(cfg.movesCount);
-        maxTurnsSlider.SetValueWithoutNotify(cfg.maxTurnCount);
-        maxRoundsField.SetValueWithoutNotify(cfg.maxRoundCount.ToString());
-        hotSeatToggle.SetValueWithoutNotify(cfg.hotSeatMode);
-        logToCSVToggle.SetValueWithoutNotify(cfg.logToCSV);
-        smoothMoveToggle.SetValueWithoutNotify(cfg.useSmoothMove);
-
-        for(int i = 0; i < cfg.playerBotType.Length; i++)
+        ConfigDataList cfgraw = LoadData.Load();
+        if (cfgraw != null && cfgraw.configList.Length > 0)
         {
-            botDropdownList[i].SetValueWithoutNotify(cfg.playerBotType[i]);
+            cfgList = cfgraw.configList.ToList();
         }
+        else
+        {
+            ConfigData cfg = new();
+            cfgList = new(){ cfg };
+        }
+        List<string> runs = new();
+        for (int i = 0; i < cfgList.Count(); i++)
+        {
+            runs.Add("Run " + i.ToString());
+            
+        }
+        radioButtonGroupSelectRun.choices = runs;
+        radioButtonGroupSelectRun.value = 0;
     }
     private void MaxRoundsFieldOnChanged(ChangeEvent<string> evt)
     {
@@ -80,21 +92,30 @@ public class SettingsHud : MonoBehaviour
     }
     private void StartGameOnClicked(ClickEvent evt)
     {
-        ConfigData cfg = new ConfigData(
-            mapSizeSlider.value, 
-            playerCountSlider.value, 
-            movesCountSlider.value, 
-            maxTurnsSlider.value,
-            int.Parse(maxRoundsField.value),
-            maxObjectivesSlider.value,
-            hotSeatToggle.value,
-            logToCSVToggle.value,
-            smoothMoveToggle.value,
-            botDropdownList.Select(list=> list.value).ToArray()
-        );
-        LoadData.Save(cfg);
-
+        ConfigDataList newcfglist = new()
+        {
+            configList = cfgList.ToArray()
+        };
+        LoadData.Save(newcfglist);
         SceneManager.LoadScene("MainSimulation", LoadSceneMode.Single);
+    }
+    private void AddRunOnClicked(ClickEvent evt){
+        List<string> runs = new();
+        for (int i = 0; i < cfgList.Count(); i++)
+        {
+            runs.Add("Run " + i.ToString());
+        }
+        runs.Add("Run " + cfgList.Count());
+        radioButtonGroupSelectRun.choices = runs;
+        cfgList.Add(null);
+        radioButtonGroupSelectRun.value = radioButtonGroupSelectRun.choices.ToArray().Length-1;
+    }
+    private void RemoveRunOnClicked(ClickEvent evt){
+        List<string> runs = radioButtonGroupSelectRun.choices.ToList();
+        runs.RemoveAt(runs.Count - 1);
+        radioButtonGroupSelectRun.choices = runs;
+        cfgList.RemoveAt(cfgList.Count - 1);
+        radioButtonGroupSelectRun.value = radioButtonGroupSelectRun.choices.ToArray().Length-1;
     }
     private void PlayerCountOnChanged(ChangeEvent<int> evt)
     {
@@ -112,6 +133,56 @@ public class SettingsHud : MonoBehaviour
                 botDropdownList[i].style.visibility = Visibility.Hidden;
                 botDropdownList[i].SetValueWithoutNotify("");
             }
+        }
+    }
+    private void SelectRunOnChanged(ChangeEvent<int> evt)
+    {
+        Debug.Log("changed value");
+        if (evt.newValue != evt.previousValue)
+        {
+            ConfigData cfg = new ConfigData(
+                mapSizeSlider.value, 
+                playerCountSlider.value, 
+                movesCountSlider.value, 
+                maxTurnsSlider.value,
+                int.Parse(maxRoundsField.value),
+                maxObjectivesSlider.value,
+                hotSeatToggle.value,
+                logToCSVToggle.value,
+                smoothMoveToggle.value,
+                botDropdownList.Select(list=> list.value).ToArray()
+            );
+            if (evt.previousValue != -1 && evt.previousValue < cfgList.Count)
+            {
+                Debug.Log("save prev value");
+                cfgList[evt.previousValue] = cfg;
+            }
+
+            ConfigData newcfg = new();
+            if(cfgList[evt.newValue] != null)
+            {
+                newcfg = cfgList[evt.newValue];
+            }
+            mapSizeSlider.SetValueWithoutNotify(newcfg.mapSize);
+            maxObjectivesSlider.SetValueWithoutNotify(newcfg.maxObjectives);
+            playerCountSlider.SetValueWithoutNotify(newcfg.playersCount);
+            movesCountSlider.SetValueWithoutNotify(newcfg.movesCount);
+            maxTurnsSlider.SetValueWithoutNotify(newcfg.maxTurnCount);
+            maxRoundsField.SetValueWithoutNotify(newcfg.maxRoundCount.ToString());
+            hotSeatToggle.SetValueWithoutNotify(newcfg.hotSeatMode);
+            logToCSVToggle.SetValueWithoutNotify(newcfg.logToCSV);
+            smoothMoveToggle.SetValueWithoutNotify(newcfg.useSmoothMove);
+
+            for(int i = 0; i < newcfg.playerBotType.Length; i++)
+            {
+                botDropdownList[i].SetValueWithoutNotify(newcfg.playerBotType[i]);
+            }
+            Debug.Log(cfgList.Count);
+            ConfigDataList newcfglist = new()
+            {
+                configList = cfgList.ToArray()
+            };
+            LoadData.Save(newcfglist);
         }
     }
 }
