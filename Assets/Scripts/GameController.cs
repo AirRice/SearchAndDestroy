@@ -720,16 +720,16 @@ public class GameController : MonoBehaviour
             }
         }
         for(int j=1;j<=maxdist;j++){
-            if(nodeID % mapSize > j)
+            if(nodeID % mapSize <= j)
             {
                 connectedNodes.Add(nodeID - j);
             }
-            else if(mapSize - (nodeID % mapSize) >= j)
+            else if((mapSize - (nodeID-1) % mapSize) >= j)
             {
                 connectedNodes.Add(nodeID + j);
             }
         }
-        //Debug.Log(string.Join(", ", connectedNodes));
+        Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
     }
     
@@ -825,6 +825,10 @@ public class GameController : MonoBehaviour
         //Debug.Log($"{string.Join(",", pathTo)}");
         int dist = pathTo.Length-1;
         return dist;
+    }
+    public int[] GetHunterPos()
+    {
+        return hunterPlayerLocations;
     }
     public float GetDistFromHunters(int nodeID)
     {

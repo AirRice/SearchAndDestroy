@@ -25,6 +25,7 @@ public abstract class BotTemplate : ScriptableObject
         GameController gcr = GameController.gameController;
         for(int i = 0; i < actionsLeft; i++)
         {
+            HandleAction(playerID, actionsLeft);
             int specActionTarget = GetSpecialActionTarget();
             if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
             {
@@ -65,6 +66,9 @@ public abstract class BotTemplate : ScriptableObject
         return;
     }
     protected virtual void HandleTurn(int playerID, int maxActionsLeft){
+        return;
+    }
+    protected virtual void HandleAction(int playerID, int maxActionsLeft){
         return;
     }
 

@@ -1,1 +1,1 @@
-{"mapSize":5,"playersCount":3,"movesCount":3,"maxTurnCount":30,"maxRoundCount":10,"maxObjectives":1,"hotSeatMode":true,"logToCSV":true,"useSmoothMove":false,"playerBotType":["GreedyTrojan","SharedScan","SharedScan","",""]}
+{"mapSize":5,"playersCount":3,"movesCount":3,"maxTurnCount":30,"maxRoundCount":10,"maxObjectives":1,"hotSeatMode":true,"logToCSV":true,"useSmoothMove":false,"playerBotType":["MCTSTrojan","SharedScan","SharedScan","",""]}
