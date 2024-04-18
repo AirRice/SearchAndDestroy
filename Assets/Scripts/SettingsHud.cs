@@ -177,7 +177,6 @@ public class SettingsHud : MonoBehaviour
             {
                 botDropdownList[i].SetValueWithoutNotify(newcfg.playerBotType[i]);
             }
-            Debug.Log(cfgList.Count);
             ConfigDataList newcfglist = new()
             {
                 configList = cfgList.ToArray()
