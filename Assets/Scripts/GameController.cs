@@ -77,7 +77,7 @@ public class GameController : MonoBehaviour
         logToCSV = cfg.logToCSV;
         useSmoothMove = cfg.useSmoothMove;
         playerBotType = cfg.playerBotType;
-        FileLogger.mainInstance.IncrementRound();
+        
         StartGame();
     }
 
@@ -122,6 +122,7 @@ public class GameController : MonoBehaviour
         targetNodeIDs = new List<int>();
         cachedPaths = new Dictionary<(int,int), int[]>();
         nodeWasInfectedLastTurn = false;
+        FileLogger.mainInstance.IncrementRound();
         
         if(restart){
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
@@ -755,8 +756,8 @@ public class GameController : MonoBehaviour
         // find centre point.
         int centreX = sumX / nodes_coords.Length;
         int centreY = sumY / nodes_coords.Length;
-
-        return (centreY-1) * mapSize + centreX;
+        Debug.Log((centreY+1) * mapSize + (centreX+1));
+        return ((centreY+1) * mapSize + (centreX+1));
     }
 
     public bool NodeIsValid(int nodeID){

@@ -20,7 +20,6 @@ public class CollabScan : BotTemplate
     public static int algoPlayerInTurn = 0; // player index only incremented when a player using this algorithm's turn comes around
     public static List<int> algoPlayerLocs = new();
     public static List<int> tempAssumed = new();
-    public static (int,int) tempAssumedSize = (0,0);
     public int followDist = 1;
     // How far to go from previous scanners in the case of a diagonal scan ()
 
