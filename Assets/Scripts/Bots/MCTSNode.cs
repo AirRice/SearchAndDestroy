@@ -248,7 +248,12 @@ public class MCTSNode
     }
     public static double UCBvalue (MCTSNode curState, double ucbConstant = 0.1)
     {
-        int reward = curState.resultDict[curState.actingPlayer] - curState.resultDict[1 - curState.actingPlayer];
+        if (curState.occurences == 0)
+        {
+            return -1;
+        }
+        int playerTeam = (curState.actingPlayer != 0) ? 1 : 0;
+        int reward = curState.resultDict[playerTeam] - curState.resultDict[1 - playerTeam];
         return (reward / curState.occurences + ucbConstant * Math.Sqrt((2 * Math.Log(curState.parentNode.occurences/curState.occurences))));
     }
     public void ResetInfectedNodes()
