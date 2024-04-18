@@ -38,8 +38,8 @@ public class MCTSNode
             {1, 0}
         };
         this.childNodes = new();
-        this.playerPos = playerPos;
-        this.infectedNodes = infectedNodes;
+        this.playerPos = (int[])playerPos.Clone();
+        this.infectedNodes = new List<int>(infectedNodes);
         this.currentTurn = currentTurn;
     }
     public MCTSNode GetSpecialActionNode(int playerID, int actionsDone, int targetNodeID)
@@ -65,9 +65,11 @@ public class MCTSNode
         {
             return null;
         }
-        MCTSNode newNode = new(playerPos, infectedNodes, (playerID == 0 && actionsDone == 0) ? currentTurn+1 : currentTurn);
-        newNode.lastActionTaken = (1, targetNodeID);
-        
+        MCTSNode newNode = new(playerPos, infectedNodes, currentTurn)
+        {
+            lastActionTaken = (1, targetNodeID)
+        };
+
         if (playerID == 0)
         {
             newNode.infectedNodes.Add(targetNodeID);
@@ -87,7 +89,7 @@ public class MCTSNode
         }
         newNode.parentNode = this;
 
-        Debug.Log($"Possible next action found: player {playerID.ToString()} special action from {playerPos[playerID]} targeting {targetNodeID}");
+        //Debug.Log($"Possible next action found: player {playerID} special action from {playerPos[playerID]} targeting {targetNodeID}");
         return newNode;
     }
     public MCTSNode GetMoveNode(int playerID, int actionsDone, int targetNodeID)
@@ -95,40 +97,44 @@ public class MCTSNode
         GameController gcr = GameController.gameController;
         if (actionsDone > gcr.movesCount)
         {
-            Debug.Log("too many actions");
             return null;
         }
         if (playerPos.Count() < playerID + 1 || playerID < 0)
         {
-            Debug.Log("invalid playerid");
             return null;
         }
         if (!gcr.GetAdjacentNodes(playerPos[playerID]).Contains(targetNodeID))
         {
-            Debug.Log("not adjacent vertex");
             return null;
         }
         if (infectedNodes.Contains(targetNodeID) && playerID != 0)
         {
-            Debug.Log("trying to move onto infected node");
             return null;
         }
         int[] newPlayerPos = (int[])playerPos.Clone();
         newPlayerPos[playerID] = targetNodeID;
-        MCTSNode newNode = new(newPlayerPos, infectedNodes, (playerID == 0 && actionsDone == 0) ? currentTurn+1 : currentTurn);
-        newNode.parentNode = this;
-        newNode.lastActionTaken = (0, targetNodeID);
+        MCTSNode newNode = new(newPlayerPos, infectedNodes, currentTurn)
+        {
+            parentNode = this,
+            lastActionTaken = (0, targetNodeID)
+        };
         if (currentTurn >= gcr.maxTurnCount)
         {
             newNode.curStateWinner = 1;
         }
-        Debug.Log($"Possible next action found: Move player {playerID.ToString()} from {playerPos[playerID]} to {targetNodeID}");
+        //Debug.Log($"Possible next action found: Move player {playerID} from {playerPos[playerID]} to {targetNodeID}");
         return newNode;
     }
-    public MCTSNode[] GetPossibleNextActions(int newMoveCount, int newPlayerID)
+    public MCTSNode[] GetPossibleNextActions()
     {
-        Debug.Log("Calculating next possible actions...");
+        //Debug.Log("Calculating next possible actions...");
         GameController gcr = GameController.gameController;
+        int newPlayerID = (this.actionsAsPlayer >= gcr.movesCount) ? (this.actingPlayer + 1) % gcr.playersCount : this.actingPlayer;
+        int newMoveCount = (this.actionsAsPlayer >= gcr.movesCount) ? 0 : this.actionsAsPlayer+1;
+        if (this.actingPlayer == 0 && this.actionsAsPlayer == 0){
+            currentTurn++;
+            ResetInfectedNodes();
+        }
         List<MCTSNode> nodes = new();
 
         if (newPlayerID != 0)
@@ -179,13 +185,12 @@ public class MCTSNode
             {
                 return 1-this.actingPlayer;
             }
-            int newPlayerID = (curState.actionsAsPlayer >= gcr.movesCount) ? (curState.actingPlayer + 1) % gcr.playersCount : curState.actingPlayer;
-            int newMoveCount = (curState.actionsAsPlayer >= gcr.movesCount) ? 0 : curState.actionsAsPlayer+1;
-            Debug.Log($"New action count: {newMoveCount}, New player: {newPlayerID}, Turn {curState.currentTurn}");
-            MCTSNode nextNode = SelectNextSimulationNode(curState.GetPossibleNextActions(newMoveCount,newPlayerID).ToArray());
+            MCTSNode nextNode = SelectNextSimulationNode(curState.GetPossibleNextActions().ToArray());
             curState = nextNode;
             depth++;
-            Debug.Log("Simulating to ending: Current node depth " + depth.ToString() + ", current state winner " + curState.curStateWinner);
+            // Debug.Log($"New action count: {curState.actionsAsPlayer}, New player: {curState.actingPlayer}, Turn {curState.currentTurn}");
+            // Debug.Log($"Infected Nodes: {string.Join(",", curState.infectedNodes)}");
+            // Debug.Log("Simulating to ending: Current node depth " + depth.ToString() + ", current state winner " + curState.curStateWinner);
         }
         return curState.curStateWinner;
     }
@@ -198,6 +203,7 @@ public class MCTSNode
         {
             this.parentNode.BackpropagateNode(winner);
         }
+        Debug.Log($"Updated occurences to {occurences}");
     }
     public MCTSNode ExploreTree()
     {
@@ -218,11 +224,7 @@ public class MCTSNode
             {
                 if (curState.uninited)
                 {
-                    Debug.Log("init new node");
-                    int newMoveCount = (curState.actionsAsPlayer >= gcr.movesCount) ? 0 : curState.actionsAsPlayer+1;
-                    int newPlayerID = (curState.actionsAsPlayer >= gcr.movesCount) ? (curState.actingPlayer + 1) % gcr.playersCount : curState.actingPlayer;
-                    Debug.Log($"New action count: {newMoveCount}, New player: {newPlayerID}");
-                    MCTSNode[] nextNodes = curState.GetPossibleNextActions(newMoveCount, newPlayerID);
+                   MCTSNode[] nextNodes = curState.GetPossibleNextActions();
                     foreach( MCTSNode node in nextNodes)
                     {
                         curState.childNodes.Add(node);
@@ -249,11 +251,17 @@ public class MCTSNode
         int reward = curState.resultDict[curState.actingPlayer] - curState.resultDict[1 - curState.actingPlayer];
         return (reward / curState.occurences + ucbConstant * Math.Sqrt((2 * Math.Log(curState.parentNode.occurences/curState.occurences))));
     }
+    public void ResetInfectedNodes()
+    {
+        GameController gcr = GameController.gameController;
+        infectedNodes = infectedNodes.Intersect(gcr.targetNodeIDs).ToList();
+    }
     public (int, int) GetBestNextAction()
     {
         int simulationCount = 100;
         for (int i = 0; i < simulationCount; i++)
         {
+            Debug.Log($"Simulation {i}");
             MCTSNode checkNode = ExploreTree();
             checkNode.BackpropagateNode(checkNode.SimulateToEnd());
         }
