@@ -21,26 +21,11 @@ public class SharedScan : BotTemplate
     protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
-        List<(int,int[])> prevScans = gcr.scanHistory;
         // If no info exists for the turn, do one just for some information
         if ((from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToList().Count <= 0)
         {
+            Debug.Log("No info found scanning");
             return currentLocation;
-        }
-
-        // prune out the possible locations if they do not meet the requirements
-        foreach ((int,int[]) info in prevScans)
-        {
-            if(info.Item2.Length < 1)
-                // Ignore this if the info is invalid
-                continue;
-        
-            Debug.Log($"Previous scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",info.Item2)} from starting node {info.Item1}");
-            List<int> nodesInDir = gcr.GetDestsClosestToAdjs(info.Item1,info.Item2);
-            foreach (int id in (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToList().Except(nodesInDir).ToArray())
-            {
-                possibleLocations[id] = false;
-            }
         }
         //Get the closest possible location
         int[] possibleLocations_arr = (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
@@ -56,7 +41,29 @@ public class SharedScan : BotTemplate
             return -1;
         }
     }
-    
+
+    protected override void OnSpecialAction(int specActionTarget)
+    {
+        GameController gcr = GameController.gameController;
+        List<(int,int[])> prevScans = new(gcr.scanHistory);
+        // recalculate the possible locations
+        // prune if they do not meet the requirements
+        foreach ((int,int[]) info in prevScans)
+        {
+            if(info.Item2.Length < 1)
+                // Ignore this if the info is invalid
+                continue;
+        
+            Debug.Log($"Previous scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",info.Item2)} from starting node {info.Item1}");
+            List<int> nodesInDir = gcr.GetDestsClosestToAdjs(info.Item1,info.Item2);
+            foreach (int id in (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToList().Except(nodesInDir).ToArray())
+            {
+                possibleLocations[id] = false;
+            }
+        }
+    }
+
+
     protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;

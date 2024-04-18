@@ -1,1 +1,1 @@
-{"mapSize":3,"playersCount":3,"movesCount":3,"maxTurnCount":30,"maxRoundCount":1000,"maxObjectives":1,"hotSeatMode":true,"logToCSV":true,"useSmoothMove":false,"playerBotType":["HumanPlayer","CollabScan","CollabScan","",""]}
+{"configList":[{"mapSize":3,"playersCount":3,"movesCount":3,"maxTurnCount":15,"maxRoundCount":10,"maxObjectives":3,"hotSeatMode":true,"logToCSV":true,"useSmoothMove":true,"playerBotType":["GreedyTrojan","SoloScan","SoloScan","",""]}]}

@@ -52,6 +52,7 @@ public class GameController : MonoBehaviour
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
+    private int runNumber = 0;
     private void Awake()
     {
         //enforce singleton
@@ -65,7 +66,7 @@ public class GameController : MonoBehaviour
     void Start()
     {   
         gameHud = gameObject.GetComponent<GameHud>();
-        ConfigData cfg = LoadData.Load();
+        ConfigData cfg = LoadData.Load().configList[runNumber];
 
         mapSize = cfg.mapSize;
         playersCount = cfg.playersCount;
@@ -188,8 +189,16 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            PlayerPrefs.SetInt("RoundsCount", 0);
-            Quit();
+            runNumber++;
+            if (LoadData.Load().configList.Length <= runNumber)
+            {
+                Quit();
+            }
+            else
+            {
+                FileLogger.mainInstance.Reset();
+                GameController.gameController.StartGame(true);
+            }
         }
     }
 
@@ -525,7 +534,7 @@ public class GameController : MonoBehaviour
     public List<int> GetDestsClosestToAdjs(int sourceID, int[] selectedAdjs)
     {
         int[] adjs = GetAdjacentNodes(sourceID);
-        if (adjs.Length > 2 || adjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
+        if (selectedAdjs.Length > 2 || selectedAdjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
         {
             return new List<int>();
         }
@@ -737,7 +746,7 @@ public class GameController : MonoBehaviour
                 connectedNodes.Add(nodeID + j);
             }
         }
-        //Debug.Log(string.Join(", ", connectedNodes));
+        Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
     }
     
@@ -833,6 +842,10 @@ public class GameController : MonoBehaviour
         //Debug.Log($"{string.Join(",", pathTo)}");
         int dist = pathTo.Length-1;
         return dist;
+    }
+    public int[] GetHunterPos()
+    {
+        return hunterPlayerLocations;
     }
     public float GetDistFromHunters(int nodeID)
     {
