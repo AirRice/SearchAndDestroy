@@ -52,7 +52,6 @@ public class GameController : MonoBehaviour
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
-    private int runNumber = 0;
     private void Awake()
     {
         //enforce singleton
@@ -66,7 +65,13 @@ public class GameController : MonoBehaviour
     void Start()
     {   
         gameHud = gameObject.GetComponent<GameHud>();
-        ConfigData cfg = LoadData.Load().configList[runNumber];
+        ConfigDataList cfgList = LoadData.Load();
+        ConfigData cfg = new();
+        int runNumber = (FileLogger.mainInstance == null) ? 0 : FileLogger.mainInstance.GetCurrentRunCount();
+        if (cfgList != null && cfgList.configList.Length > runNumber)
+        {
+            cfg = cfgList.configList[runNumber];
+        }
 
         mapSize = cfg.mapSize;
         playersCount = cfg.playersCount;
@@ -189,14 +194,13 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            runNumber++;
-            if (LoadData.Load().configList.Length <= runNumber)
+            FileLogger.mainInstance.Reset();
+            if (LoadData.Load().configList.Length <= FileLogger.mainInstance.GetCurrentRunCount())
             {
                 Quit();
             }
             else
             {
-                FileLogger.mainInstance.Reset();
                 GameController.gameController.StartGame(true);
             }
         }
@@ -250,6 +254,7 @@ public class GameController : MonoBehaviour
     */
     private readonly float nodeVertDist = 5f;
     private readonly float nodeHorizDist = 4.5f;
+    private readonly int generateObjsTries = 1000;
     void SetupBoard()
     {   
         // load file for setting the board up. Format: each rank of the board (in number of nodes)
@@ -291,12 +296,12 @@ public class GameController : MonoBehaviour
         {
             bool chosen = false;
             int randomChosenTarget = -1;
-            while (!chosen)
+            for(int j = 0; j < generateObjsTries; j++)
             {
                 randomChosenTarget = Random.Range(2, (int)Math.Floor(d_mapSize*d_mapSize/2));
                 if (!targetNodeIDs.Contains(randomChosenTarget) && !IsAdjacentToTargetNodes(randomChosenTarget))
                 {
-                    chosen = true;
+                    break;
                 }
             }
             

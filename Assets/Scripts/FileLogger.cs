@@ -10,6 +10,7 @@ public class FileLogger : MonoBehaviour
     private string filePath;
     private bool headerDone = false;
     private int roundCount = 0;
+    private int runCount = 0;
     private void Awake()
     {
         //enforce singleton
@@ -26,6 +27,7 @@ public class FileLogger : MonoBehaviour
         headerDone = false;
         filePath = null;
         roundCount = 0;
+        runCount++;
     }
     // Returns the file path string. Called when awaken only.
     private string GetLogPath()
@@ -34,7 +36,7 @@ public class FileLogger : MonoBehaviour
         DateTime timeNow = DateTime.Now;
         string timeString = timeNow.ToUniversalTime().ToString(datePatt);
         string botTypes = string.Join("-", GameController.gameController.playerBotType);
-        return Application.persistentDataPath + "/Logs/" + timeString + botTypes + ".csv";
+        return Application.persistentDataPath + "/Logs/" + timeString + botTypes + "Run" + runCount.ToString() + ".csv";
     }
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
@@ -57,5 +59,9 @@ public class FileLogger : MonoBehaviour
     public int GetCurrentRoundCount()
     {
         return roundCount;
+    }
+    public int GetCurrentRunCount()
+    {
+        return runCount;
     }
 }
