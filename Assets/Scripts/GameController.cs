@@ -751,7 +751,7 @@ public class GameController : MonoBehaviour
                 connectedNodes.Add(nodeID + j);
             }
         }
-        Debug.Log(string.Join(", ", connectedNodes));
+        //Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
     }
     
@@ -770,7 +770,7 @@ public class GameController : MonoBehaviour
         // find centre point.
         int centreX = sumX / nodes_coords.Length;
         int centreY = sumY / nodes_coords.Length;
-        Debug.Log((centreY+1) * mapSize + (centreX+1));
+        //Debug.Log((centreY+1) * mapSize + (centreX+1));
         return ((centreY+1) * mapSize + (centreX+1));
     }
 
