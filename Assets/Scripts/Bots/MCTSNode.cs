@@ -28,6 +28,7 @@ public class MCTSNode
     protected Dictionary<int, int> resultDict = new Dictionary<int, int>();
     protected Queue<MCTSNode> untraversedNodes = new();
     bool uninited = true;
+    private readonly bool debugLogging = true;
     public MCTSNode(int[] playerPos, List<int> infectedNodes, int currentTurn)
     {
         GameController gcr = GameController.gameController;
@@ -89,7 +90,10 @@ public class MCTSNode
         }
         newNode.parentNode = this;
 
-        //Debug.Log($"Possible next action found: player {playerID} special action from {playerPos[playerID]} targeting {targetNodeID}");
+        if(debugLogging)
+        {
+            Debug.Log($"Possible next action found: player {playerID} special action from {playerPos[playerID]} targeting {targetNodeID}");
+        }
         return newNode;
     }
     public MCTSNode GetMoveNode(int playerID, int actionsDone, int targetNodeID)
@@ -122,12 +126,14 @@ public class MCTSNode
         {
             newNode.curStateWinner = 1;
         }
-        //Debug.Log($"Possible next action found: Move player {playerID} from {playerPos[playerID]} to {targetNodeID}");
+        if(debugLogging)
+        {
+            Debug.Log($"Possible next action found: Move player {playerID} from {playerPos[playerID]} to {targetNodeID}");
+        }
         return newNode;
     }
     public MCTSNode[] GetPossibleNextActions()
     {
-        //Debug.Log("Calculating next possible actions...");
         GameController gcr = GameController.gameController;
         int newPlayerID = (this.actionsAsPlayer >= gcr.movesCount) ? (this.actingPlayer + 1) % gcr.playersCount : this.actingPlayer;
         int newMoveCount = (this.actionsAsPlayer >= gcr.movesCount) ? 0 : this.actionsAsPlayer+1;
@@ -188,9 +194,13 @@ public class MCTSNode
             MCTSNode nextNode = SelectNextSimulationNode(curState.GetPossibleNextActions().ToArray());
             curState = nextNode;
             depth++;
-            // Debug.Log($"New action count: {curState.actionsAsPlayer}, New player: {curState.actingPlayer}, Turn {curState.currentTurn}");
-            // Debug.Log($"Infected Nodes: {string.Join(",", curState.infectedNodes)}");
-            // Debug.Log("Simulating to ending: Current node depth " + depth.ToString() + ", current state winner " + curState.curStateWinner);
+            if(debugLogging)
+            {
+                Debug.Log($"New action count: {curState.actionsAsPlayer}, New player: {curState.actingPlayer}, Turn {curState.currentTurn}");
+                Debug.Log($"Infected Nodes: {string.Join(",", curState.infectedNodes)}");
+                Debug.Log("Simulating to ending: Current node depth " + depth.ToString() + ", current state winner " + curState.curStateWinner);
+            }
+
         }
         return curState.curStateWinner;
     }
@@ -203,7 +213,6 @@ public class MCTSNode
         {
             this.parentNode.BackpropagateNode(winner);
         }
-        Debug.Log($"Updated occurences to {occurences}");
     }
     public MCTSNode ExploreTree()
     {
