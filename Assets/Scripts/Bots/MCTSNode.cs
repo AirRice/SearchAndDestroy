@@ -28,7 +28,7 @@ public class MCTSNode
     protected Dictionary<int, int> resultDict = new Dictionary<int, int>();
     protected Queue<MCTSNode> untraversedNodes = new();
     bool uninited = true;
-    private readonly bool debugLogging = true;
+    private readonly bool debugLogging = false;
     public MCTSNode(int[] playerPos, List<int> infectedNodes, int currentTurn)
     {
         GameController gcr = GameController.gameController;
@@ -278,6 +278,10 @@ public class MCTSNode
             Debug.Log($"Simulation {i}");
             MCTSNode checkNode = ExploreTree();
             checkNode.BackpropagateNode(checkNode.SimulateToEnd());
+            if(checkNode == this)
+            {
+                break;
+            }
         }
         return GetBestChildState().lastActionTaken;
     }
