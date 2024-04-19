@@ -7,7 +7,6 @@ using System;
 public class FileLogger : MonoBehaviour
 {
     public static FileLogger mainInstance;
-    private string filePath;
     private string fileName;
     private bool headerDone = false;
     private int roundCount = 0;
@@ -16,20 +15,33 @@ public class FileLogger : MonoBehaviour
     {
         //enforce singleton
         if (mainInstance == null)
+        {
             mainInstance = this;
+        }
         else
+        {
             Destroy(gameObject);
+            return;
+        }
         DontDestroyOnLoad(gameObject);
+        Reset();
     }
 
     public void Reset()
     // Resets the various values so the logging starts again on a new file.
     {
         headerDone = false;
-        filePath = null;
-        fileName = null;
+        fileName = GetLogFileName();
         roundCount = 0;
         runCount++;
+        ConfigDataList cfgList = LoadData.Load();
+        ConfigData cfg = new();
+        int runNumber = GetCurrentRunCount();
+        if (cfgList != null && cfgList.configList.Length > runNumber)
+        {
+            cfg = cfgList.configList[runNumber];
+            WriteNewGameConfig(cfg);
+        }
     }
     // Returns the file path string.
     private string GetLogFileName()
@@ -45,8 +57,8 @@ public class FileLogger : MonoBehaviour
     }
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
-        filePath ??= filePath ?? GetLogPath();
-        //Debug.Log($"Writing File {filePath}");
+        string filePath = GetLogPath();
+        Debug.Log($"Writing File {filePath}");
         using (StreamWriter w = File.AppendText(filepath_override ?? filePath))
         {
             if (!headerDone){
@@ -59,7 +71,6 @@ public class FileLogger : MonoBehaviour
     }
     public void WriteNewGameConfig(ConfigData cfg, string filepath_override = null)
     {
-        fileName ??= fileName ?? GetLogFileName();
         string runHistoryFilePath = Application.persistentDataPath + "/Logs/runhistory.csv";
         if (!File.Exists(runHistoryFilePath))
         {
@@ -70,13 +81,10 @@ public class FileLogger : MonoBehaviour
                 w.WriteLine("fileName|mapSize|playersCount|movesCount|maxTurnCount|maxRoundCount|maxObjectives|playerBotTypes");
             }	
         }
-        else
+        // Assume header exists in this case
+        using (StreamWriter w = File.AppendText(filepath_override ?? runHistoryFilePath))
         {
-            // Assume header exists in this case
-            using (StreamWriter w = File.AppendText(filepath_override ?? runHistoryFilePath))
-            {
-                w.WriteLine($"{fileName}|{cfg.mapSize}|{cfg.playersCount}|{cfg.movesCount}|{cfg.maxTurnCount}|{cfg.maxRoundCount}|{cfg.maxObjectives}|{string.Join(",",cfg.playerBotType)}");
-            }
+            w.WriteLine($"{fileName}|{cfg.mapSize}|{cfg.playersCount}|{cfg.movesCount}|{cfg.maxTurnCount}|{cfg.maxRoundCount}|{cfg.maxObjectives}|{string.Join(",",cfg.playerBotType)}");
         }
     }
     public void IncrementRound()
