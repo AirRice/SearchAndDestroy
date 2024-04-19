@@ -195,6 +195,7 @@ public class GameController : MonoBehaviour
         else
         {
             FileLogger.mainInstance.Reset();
+            FileLogger.mainInstance.IncrementRunCount();
             if (LoadData.Load().configList.Length <= FileLogger.mainInstance.GetCurrentRunCount())
             {
                 Quit();

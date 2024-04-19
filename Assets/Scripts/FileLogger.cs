@@ -33,7 +33,6 @@ public class FileLogger : MonoBehaviour
         headerDone = false;
         fileName = GetLogFileName();
         roundCount = 0;
-        runCount++;
         ConfigDataList cfgList = LoadData.Load();
         ConfigData cfg = new();
         int runNumber = GetCurrentRunCount();
@@ -90,6 +89,10 @@ public class FileLogger : MonoBehaviour
     public void IncrementRound()
     {
         roundCount++;
+    }
+    public void IncrementRunCount()
+    {
+        runCount++;
     }
     public int GetCurrentRoundCount()
     {
