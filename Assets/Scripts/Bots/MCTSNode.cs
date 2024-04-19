@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Linq;
 using Random = UnityEngine.Random;
 using Math = System.Math;
+using Double = System.Double;
 public class MCTSNode
 {
 
@@ -259,7 +260,7 @@ public class MCTSNode
     {
         if (curState.occurences == 0)
         {
-            return -1;
+            return Double.PositiveInfinity;
         }
         int playerTeam = (curState.actingPlayer != 0) ? 1 : 0;
         int reward = curState.resultDict[playerTeam] - curState.resultDict[1 - playerTeam];
