@@ -22,14 +22,14 @@ public class SoloScan : BotTemplate
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
+            //Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
             return potential_target;
         }
         else
         {
             // This shouldn't happen
             int toMoveTo = SelectNextNodeRandom(currentLocation);
-            Debug.Log($"Moving to node id {toMoveTo}");
+            //Debug.Log($"Moving to node id {toMoveTo}");
             return toMoveTo;
         }
     }
@@ -41,7 +41,7 @@ public class SoloScan : BotTemplate
         // If no previous scan info exists for the turn, do one just for some information
         if (prevScans.Count == 0)
         {
-            Debug.Log($"Scanning at node id {currentLocation} as first action");
+            //Debug.Log($"Scanning at node id {currentLocation} as first action");
             return currentLocation;
         }
         else
@@ -57,7 +57,7 @@ public class SoloScan : BotTemplate
             //truncate this list by intersecting it with the possible directions from each scan info
             foreach ((int,int[]) info in prevScans)
             {
-                Debug.Log($"Previous scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",info.Item2)} from starting node {info.Item1}");
+                //Debug.Log($"Previous scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",info.Item2)} from starting node {info.Item1}");
                 List<int> nodesInDir = gcr.GetDestsClosestToAdjs(info.Item1,info.Item2);
                 
                 possibleLocations = possibleLocations.Intersect(nodesInDir).ToList();
@@ -67,12 +67,12 @@ public class SoloScan : BotTemplate
             if (possibleLocations.Count > 0)
             {
                 int closestTarget = possibleLocations.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
-                Debug.Log($"Closest potential Target found: node id {closestTarget}");
+                //Debug.Log($"Closest potential Target found: node id {closestTarget}");
                 return closestTarget;
             }
             else
             {
-                Debug.Log($"No potential targets found.");
+                //Debug.Log($"No potential targets found.");
                 return -1;
             }
         }

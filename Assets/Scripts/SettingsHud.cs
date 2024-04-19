@@ -137,7 +137,6 @@ public class SettingsHud : MonoBehaviour
     }
     private void SelectRunOnChanged(ChangeEvent<int> evt)
     {
-        Debug.Log("changed value");
         if (evt.newValue != evt.previousValue)
         {
             ConfigData cfg = new ConfigData(
@@ -154,7 +153,6 @@ public class SettingsHud : MonoBehaviour
             );
             if (evt.previousValue != -1 && evt.previousValue < cfgList.Count)
             {
-                Debug.Log("save prev value");
                 cfgList[evt.previousValue] = cfg;
             }
 
