@@ -8,6 +8,7 @@ public class FileLogger : MonoBehaviour
 {
     public static FileLogger mainInstance;
     private string filePath;
+    private string fileName;
     private bool headerDone = false;
     private int roundCount = 0;
     private int runCount = 0;
@@ -26,17 +27,21 @@ public class FileLogger : MonoBehaviour
     {
         headerDone = false;
         filePath = null;
+        fileName = null;
         roundCount = 0;
         runCount++;
     }
-    // Returns the file path string. Called when awaken only.
-    private string GetLogPath()
+    // Returns the file path string.
+    private string GetLogFileName()
     {
-        string datePatt = @"yy-MM-dd-hh-mm";
+        string datePatt = @"yyyy-MM-dd-hh-mm";
         DateTime timeNow = DateTime.Now;
         string timeString = timeNow.ToUniversalTime().ToString(datePatt);
-        string botTypes = string.Join("-", GameController.gameController.playerBotType);
-        return Application.persistentDataPath + "/Logs/" + timeString + botTypes + "Run" + runCount.ToString() + ".csv";
+        return timeString + "Run" + runCount.ToString();
+    }
+    private string GetLogPath()
+    {
+        return Application.persistentDataPath + "/Logs/" + fileName + ".csv";
     }
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
@@ -50,6 +55,28 @@ public class FileLogger : MonoBehaviour
                 headerDone = true;
             }
             w.WriteLine($"{roundCount}|"+log_string);
+        }
+    }
+    public void WriteNewGameConfig(ConfigData cfg, string filepath_override = null)
+    {
+        fileName ??= fileName ?? GetLogFileName();
+        string runHistoryFilePath = Application.persistentDataPath + "/Logs/runhistory.csv";
+        if (!File.Exists(runHistoryFilePath))
+        {
+            // Create a file to write to.
+            using (StreamWriter w = File.CreateText(runHistoryFilePath))
+            {
+                w.WriteLine($"sep=|");
+                w.WriteLine("fileName|mapSize|playersCount|movesCount|maxTurnCount|maxRoundCount|maxObjectives|playerBotTypes");
+            }	
+        }
+        else
+        {
+            // Assume header exists in this case
+            using (StreamWriter w = File.AppendText(filepath_override ?? runHistoryFilePath))
+            {
+                w.WriteLine($"{fileName}|{cfg.mapSize}|{cfg.playersCount}|{cfg.movesCount}|{cfg.maxTurnCount}|{cfg.maxRoundCount}|{cfg.maxObjectives}|{string.Join(",",cfg.playerBotType)}");
+            }
         }
     }
     public void IncrementRound()

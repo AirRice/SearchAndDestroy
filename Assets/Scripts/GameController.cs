@@ -71,6 +71,10 @@ public class GameController : MonoBehaviour
         if (cfgList != null && cfgList.configList.Length > runNumber)
         {
             cfg = cfgList.configList[runNumber];
+            if (cfg.logToCSV)
+            {
+                FileLogger.mainInstance.WriteNewGameConfig(cfg);
+            }
         }
 
         mapSize = cfg.mapSize;
