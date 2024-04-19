@@ -85,10 +85,6 @@ public class MCTSNode
         {
             newNode.curStateWinner = 1;
         }
-        if (currentTurn >= gcr.maxTurnCount)
-        {
-            newNode.curStateWinner = 1;
-        }
         newNode.parentNode = this;
 
         if(debugLogging)
@@ -123,10 +119,6 @@ public class MCTSNode
             parentNode = this,
             lastActionTaken = (0, targetNodeID)
         };
-        if (currentTurn >= gcr.maxTurnCount)
-        {
-            newNode.curStateWinner = 1;
-        }
         if(debugLogging)
         {
             Debug.Log($"Possible next action found: Move player {playerID} from {playerPos[playerID]} to {targetNodeID}");
@@ -178,6 +170,13 @@ public class MCTSNode
     }
     public MCTSNode SelectNextSimulationNode(MCTSNode[] nodes)
     {
+        if(debugLogging)
+        {
+            foreach (MCTSNode node in nodes)
+            {
+                Debug.Log($"Action proposed: Player {node.actingPlayer} {(node.lastActionTaken.Item1 == 0 ? "moves to" : "performs action on")} vertex {node.lastActionTaken.Item2}");
+            }
+        }
         MCTSNode nextNode = nodes[Random.Range(0,nodes.Length)];
         return nextNode;
     }
@@ -188,9 +187,13 @@ public class MCTSNode
         int depth = 0;
         while (curState.curStateWinner == -1)
         {
-            if (depth > 10000)
+            if (curState.currentTurn >= gcr.maxTurnCount)
             {
-                return 1-this.actingPlayer;
+                return 1;
+            }
+            else if (depth >= 2 * gcr.movesCount * gcr.playersCount) //If we've successfully looked forward to 2 turns in
+            {
+                return MCTSNode.HeuristicWinner(curState);
             }
             MCTSNode nextNode = SelectNextSimulationNode(curState.GetPossibleNextActions().ToArray());
             curState = nextNode;
@@ -265,6 +268,15 @@ public class MCTSNode
         int playerTeam = (curState.actingPlayer != 0) ? 1 : 0;
         int reward = curState.resultDict[playerTeam] - curState.resultDict[1 - playerTeam];
         return (reward / curState.occurences + ucbConstant * Math.Sqrt((2 * Math.Log(curState.parentNode.occurences/curState.occurences))));
+    }
+    public static int HeuristicWinner (MCTSNode curState)
+    // Heuristic value to figure out who is more favoured
+    {
+        GameController gcr = GameController.gameController;
+        double infectedTargetsRatio = curState.infectedNodes.Intersect(gcr.targetNodeIDs).ToList().Count/gcr.targetNodeIDs.Count;
+        double turnRatio = curState.currentTurn/gcr.maxTurnCount;
+        // If the ratio of infected targets is higher than the ratio of the turn, assume Trojans can win more here
+        return (infectedTargetsRatio - turnRatio) >= 0 ? 0 : 1;
     }
     public void ResetInfectedNodes()
     {
