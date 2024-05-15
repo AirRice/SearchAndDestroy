@@ -7,7 +7,7 @@ using Unity.VisualScripting;
 
 public class GreedyAvoidTrojan : BotTemplate
 {
-    public readonly float risk_factor = 0.01f; // Chance of risk-taking: will ignore avoidance with this frequency
+    public readonly float risk_factor = 0.3f; // Chance of risk-taking: will ignore avoidance with this frequency
     public readonly int avoid_dist = 2;
     private int curInfectTarget = -1;
     protected override int GetSpecialActionTarget()

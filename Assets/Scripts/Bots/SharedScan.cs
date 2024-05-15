@@ -79,7 +79,7 @@ public class SharedScan : BotTemplate
         {
             // This shouldn't happen
             int toMoveTo = SelectNextNodeRandom(currentLocation);
-            Debug.Log($"Moving to node id {toMoveTo}");
+            Debug.Log($"Moving to node id {toMoveTo} randomly");
             return toMoveTo;
         }
     }

@@ -7,13 +7,17 @@ public abstract class BotTemplate : ScriptableObject
     protected int currentLocation;
     protected abstract int GetMovementTarget(int specActionTarget);
     protected abstract int GetSpecialActionTarget();
+    protected bool debugLogging = false;
     public void SetHidden(bool b)
     {
         isHiddenBot = b;
     }
     public void ProcessTurn(int playerID, int currentNodeID, int actionsLeft)
     {
-        Debug.Log($"Processing turn for player {playerID}");
+        if(debugLogging)
+        {
+            Debug.Log($"Processing turn for player {playerID}");
+        }
         if((isHiddenBot && playerID != 0) || (!isHiddenBot && playerID == 0))
         {
             Debug.Log($"Warning: Player {playerID} is not a valid target for {GetType().Name}.");
@@ -29,21 +33,26 @@ public abstract class BotTemplate : ScriptableObject
             int specActionTarget = GetSpecialActionTarget();
             if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
             {
-                Debug.Log($"Infecting node id {specActionTarget}");
-                OnSpecialAction(specActionTarget);
+                if(debugLogging)
+                {
+                    Debug.Log($"Infecting node id {specActionTarget}");
+                }
                 if (gcr.TrySpecialAction(Node.GetNode(specActionTarget))) {
                     break;
                 }
-                
+                OnSpecialAction(specActionTarget);
                 continue;
             }
             else if (!isHiddenBot && currentLocation == specActionTarget)
             {
-                Debug.Log($"Scanning at node id {specActionTarget}");
-                OnSpecialAction(specActionTarget);
+                if(debugLogging)
+                {
+                    Debug.Log($"Scanning at node id {specActionTarget}");
+                }
                 if (gcr.TrySpecialAction()) {
                     break;
                 }
+                OnSpecialAction(specActionTarget);
                 continue;
             }
             int moveTarget = GetMovementTarget(specActionTarget);
@@ -51,12 +60,18 @@ public abstract class BotTemplate : ScriptableObject
             {
                 gcr.TryMoveToNode(moveTarget);
                 currentLocation = moveTarget;
-                Debug.Log($"Moving to node id {moveTarget}");
+                if(debugLogging)
+                {
+                    Debug.Log($"Moving to node id {moveTarget}");
+                }
                 OnMove(moveTarget);
             }
         }
         OnPlayerTurnEnd();
-        gcr.ProgressTurn();
+        if (gcr.autoProgressTurn)
+        {
+            gcr.ProgressTurn();
+        }
     }
     protected virtual void OnPlayerTurnEnd()
     {

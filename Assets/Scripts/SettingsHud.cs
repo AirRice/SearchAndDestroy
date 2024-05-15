@@ -15,6 +15,7 @@ public class SettingsHud : MonoBehaviour
     private Toggle hotSeatToggle;
     private Toggle logToCSVToggle;
     private Toggle smoothMoveToggle;
+    private Toggle autoProcessTurnToggle;
     private List<DropdownField> botDropdownList = new();
     private RadioButtonGroup radioButtonGroupSelectRun;
     private Button buttonStartGame;
@@ -35,6 +36,7 @@ public class SettingsHud : MonoBehaviour
         hotSeatToggle = root.Q<Toggle>("hotSeatToggle");
         logToCSVToggle = root.Q<Toggle>("logToCSVToggle");   
         smoothMoveToggle = root.Q<Toggle>("smoothMoveToggle");
+        autoProcessTurnToggle = root.Q<Toggle>("autoProcessTurnToggle");
 
         buttonStartGame = root.Q<Button>("buttonStartGame");
         buttonAddRun = root.Q<Button>("buttonAddRun");
@@ -149,6 +151,7 @@ public class SettingsHud : MonoBehaviour
                 hotSeatToggle.value,
                 logToCSVToggle.value,
                 smoothMoveToggle.value,
+                autoProcessTurnToggle.value,
                 botDropdownList.Select(list=> list.value).ToArray()
             );
             if (evt.previousValue != -1 && evt.previousValue < cfgList.Count)

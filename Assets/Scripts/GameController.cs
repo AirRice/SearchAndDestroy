@@ -22,6 +22,7 @@ public class GameController : MonoBehaviour
     public bool hotSeatMode = true;
     public bool logToCSV = true;
     public bool useSmoothMove = false;
+    public bool autoProgressTurn = false;
     public PlayerPiece playerPrefab;
     public Node nodePrefab;
     public DistanceTextPopup textPopupPrefab;
@@ -82,6 +83,7 @@ public class GameController : MonoBehaviour
         hotSeatMode = cfg.hotSeatMode;
         logToCSV = cfg.logToCSV;
         useSmoothMove = cfg.useSmoothMove;
+        autoProgressTurn = cfg.autoProcessTurn;
         playerBotType = cfg.playerBotType;
         
         StartGame();
@@ -194,8 +196,8 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            FileLogger.mainInstance.Reset();
             FileLogger.mainInstance.IncrementRunCount();
+            FileLogger.mainInstance.Reset();
             if (LoadData.Load().configList.Length <= FileLogger.mainInstance.GetCurrentRunCount())
             {
                 Quit();
@@ -560,6 +562,11 @@ public class GameController : MonoBehaviour
         }
         return possibleNodes;
     }
+
+    public bool GetIsNodeDiagonalFromSource(int sourceID, int targetID)
+    {
+        return (GetClosestAdjToDest(sourceID, targetID).Count == 1);
+    }
     public void UpdateActivePlayerPosition(int destID)
     {
         PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();
@@ -636,7 +643,6 @@ public class GameController : MonoBehaviour
         }
         if(playerBotControllers[currentTurnPlayer] != null)
         {
-            Debug.Log("handle automatic turn");
             //Handle automatic turn
             int currentPlayerNode = GetActivePlayerPosition();
             playerBotControllers[currentTurnPlayer].ProcessTurn(currentTurnPlayer, currentPlayerNode, currentPlayerMoves);
@@ -730,27 +736,20 @@ public class GameController : MonoBehaviour
 
     public int[] GetAdjacentNodes (int nodeID, int maxdist = 1)
     {
-        List<int> connectedNodes = new();
-        for(int i=1;i<=maxdist;i++){
-            for(int j=0;j<=maxdist-i;j++){
-                connectedNodes.Add(nodeID - mapSize*i - j);
-                connectedNodes.Add(nodeID + mapSize*i - j);
-                if(j != 0)
-                {
-                    connectedNodes.Add(nodeID - mapSize*i + j);
-                    connectedNodes.Add(nodeID + mapSize*i + j);
-                }        
-            }
+        if (maxdist <= 0)
+        {
+            return new int[]{nodeID};
         }
-        for(int j=1;j<=maxdist;j++){
-            if(nodeID % mapSize > j || nodeID % mapSize == 0)
-            {
-                connectedNodes.Add(nodeID - j);
-            }
-            if(mapSize - (nodeID % mapSize) >= j)
-            {
-                connectedNodes.Add(nodeID + j);
-            }
+        List<int> connectedNodes = new();
+        connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID - mapSize, maxdist-1)).ToList();
+        connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID + mapSize, maxdist-1)).ToList();
+        if(nodeID % mapSize > 1 || nodeID % mapSize == 0)
+        {
+            connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID - 1, maxdist-1)).ToList();
+        }
+        if(mapSize - (nodeID % mapSize) >= 1 && nodeID % mapSize != 0)
+        {
+            connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID + 1, maxdist-1)).ToList();
         }
         //Debug.Log(string.Join(", ", connectedNodes));
         return connectedNodes.Where(node => NodeIsValid(node)).ToArray();
@@ -863,6 +862,45 @@ public class GameController : MonoBehaviour
             sum += GetPathLength(nodeID,hunterPlayerLocations[i]);
         }
         return sum/(playersCount-1);
+    }
+    public int GetClosestTargetNodeDist(int nodeID, bool ignoreInfected = true)
+    {
+        int min = 9999;
+        foreach (int targetPos in targetNodeIDs)
+        {
+            if(ignoreInfected && infectedNodeIDs.Contains(targetPos))
+                continue;
+            int targetdist = GetPathLength(nodeID,targetPos);
+            if (targetdist < min)
+            {
+                min = targetdist;
+            }
+        }
+        return min;
+    }
+
+    public double ScanStandardDeviation(int[] nodesToAssess, int scanPos)
+    {
+        Dictionary<String, int> eachDirNodes = new();
+        foreach (int nodeID in nodesToAssess)
+        {
+            string identifier = string.Join("|", GetClosestAdjToDest(scanPos,nodeID));
+            if (eachDirNodes.ContainsKey(identifier))
+            {
+                eachDirNodes[identifier]++;
+            }
+            else
+            {
+                eachDirNodes.Add(identifier,1);
+            }
+        }
+        if (eachDirNodes.Count > 0)
+        {
+            int[] values = eachDirNodes.Values.ToArray();
+            double avg = values.Average();
+            return Math.Sqrt(values.Average(v=>Math.Pow(v-avg,2)));
+        }
+        return -1;
     }
 
     // implementation of in-place shuffle algorithm

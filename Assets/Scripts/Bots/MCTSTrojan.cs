@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class MCTSTrojan : BotTemplate
@@ -15,7 +16,23 @@ public class MCTSTrojan : BotTemplate
         };
         playerPos.AddRange(gcr.GetHunterPos());
         MCTSNode node = new(playerPos.ToArray(), gcr.infectedNodeIDs, gcr.GetTurnNumber());
-        nextAction = node.GetBestNextAction();
+
+        int HeuristicFunction(MCTSNode curState)
+        {
+            // Heuristic value to figure out who is more favoured
+            GameController gcr = GameController.gameController;
+            int closestTargetDist = gcr.GetClosestTargetNodeDist(curState.playerPos[playerID]);
+            float distFromHunters = gcr.GetDistFromHunters(curState.playerPos[playerID]);
+            if (gcr.targetNodeIDs.Contains(curState.newlyInfectedNode))
+            {
+                return 0; // If a new target has been infected consider this an advantage to trojan.
+            }
+            // If we're closer to a target than the average distance from hunters, assume the trojan has advantage here.
+            return (closestTargetDist <= distFromHunters) ? 0 : 1;
+        }
+
+
+        nextAction = node.GetBestNextAction(HeuristicFunction);
     }
     
     protected override int GetSpecialActionTarget()

@@ -55,14 +55,17 @@ public class GreedyTrojan : BotTemplate
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            Debug.Log($"target node to infect is {specActionTarget}, heading to node {potential_target}");
+            if(debugLogging)
+            {
+                Debug.Log($"target node to infect is {specActionTarget}, heading to node {potential_target}");
+            }
             return potential_target;
         }
         else
         {
             // This shouldn't happen since the game would already be won by this point.
             int toMoveTo = SelectNextNodeRandom(currentLocation);
-            Debug.Log($"Moving to node id {toMoveTo}");
+            Debug.Log($"Moving to node id {toMoveTo} randomly");
             return toMoveTo;
         }
     }

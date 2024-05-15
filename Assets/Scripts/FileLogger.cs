@@ -57,7 +57,7 @@ public class FileLogger : MonoBehaviour
     public void WriteLineToLog(string log_string, string filepath_override = null)
     {
         string filePath = GetLogPath();
-        Debug.Log($"Writing File {filePath}");
+        //Debug.Log($"Writing File {filePath}");
         using (StreamWriter w = File.AppendText(filepath_override ?? filePath))
         {
             if (!headerDone){

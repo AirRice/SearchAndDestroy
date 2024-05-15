@@ -34,6 +34,7 @@ public class ConfigData{
     public int maxObjectives;
     public bool hotSeatMode;
     public bool logToCSV;
+    public bool autoProcessTurn;
     public bool useSmoothMove;
     public string[] playerBotType;
 
@@ -47,6 +48,7 @@ public class ConfigData{
         maxObjectives = 2;
         hotSeatMode = true;
         logToCSV = false;
+        autoProcessTurn = true;
         useSmoothMove = true;
         playerBotType = new string[] { "", "", "" };
     }
@@ -61,6 +63,7 @@ public class ConfigData{
         bool hotSeatMode,
         bool logToCSV,
         bool useSmoothMove,
+        bool autoProcessTurn,
         string[] playerBotType
     )
     {
@@ -72,6 +75,7 @@ public class ConfigData{
         this.maxObjectives = maxObjectives;
         this.hotSeatMode = hotSeatMode;
         this.logToCSV = logToCSV;
+        this.autoProcessTurn = autoProcessTurn;
         this.useSmoothMove = useSmoothMove;
         this.playerBotType = playerBotType;
     }
