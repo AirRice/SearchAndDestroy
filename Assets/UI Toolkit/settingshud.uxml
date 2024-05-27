@@ -11,6 +11,7 @@
             <ui:Toggle label="Hot Seat Mode" name="hotSeatToggle" value="true" style="font-size: 16px;" />
             <ui:Toggle label="Log to CSV" name="logToCSVToggle" value="true" style="font-size: 16px;" />
             <ui:Toggle label="Smooth Movement" name="smoothMoveToggle" style="font-size: 16px;" />
+            <ui:Toggle label="Auto Progress Turn" name="autoProcessTurnToggle" style="font-size: 16px;" />
             <ui:Label text="Algorithm Settings" display-tooltip-when-elided="true" style="font-size: 20px;" />
             <ui:DropdownField label="Trojan Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="trojanBotDropdown" />
             <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot1Dropdown" />
