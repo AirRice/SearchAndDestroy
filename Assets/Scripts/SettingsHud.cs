@@ -44,7 +44,7 @@ public class SettingsHud : MonoBehaviour
 
         radioButtonGroupSelectRun = root.Q<RadioButtonGroup>("radioGroupSelectRun");
         // Update this for when algorithms get added later
-        List<string> trojanModes = new() { "GreedyTrojan", "GreedyAvoidTrojan", "MCTSTrojan", "HumanPlayer"};
+        List<string> trojanModes = new() { "GreedyTrojan", "CautiousTrojan", "MCTSTrojan", "HumanPlayer"};
         List<string> scannerModes = new() { "SoloScan", "SharedScan", "CollabScan", "HumanPlayer"};
 
         botDropdownList.Add(root.Q<DropdownField>("trojanBotDropdown"));
@@ -172,6 +172,7 @@ public class SettingsHud : MonoBehaviour
             maxRoundsField.SetValueWithoutNotify(newcfg.maxRoundCount.ToString());
             hotSeatToggle.SetValueWithoutNotify(newcfg.hotSeatMode);
             logToCSVToggle.SetValueWithoutNotify(newcfg.logToCSV);
+            autoProcessTurnToggle.SetValueWithoutNotify(newcfg.autoProcessTurn);
             smoothMoveToggle.SetValueWithoutNotify(newcfg.useSmoothMove);
 
             for(int i = 0; i < newcfg.playerBotType.Length; i++)
