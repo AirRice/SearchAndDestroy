@@ -40,18 +40,15 @@ public class CollabScan : BotTemplate
         {
             return currentScanTarget;
         }
-        // If the last player
-        if (gcr.currentTurnPlayer == gcr.playersCount-1) 
+        if (((double)possibleLocationsList.Count/gcr.mapSize * gcr.mapSize <= 0.3 || gcr.currentTurnPlayer == gcr.playersCount-1) && possibleLocationsList.Count > 0) 
         {
-            if (possibleLocationsList.Count > 0)
+            // If we are the last scanner or there's a small number of possible locations, scan the nearest
+            int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
+            if(debugLogging)
             {
-                int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
-                if(debugLogging)
-                {
-                    Debug.Log($"Closest potential target found: node id {closestTarget}");
-                }
-                return closestTarget;
+                Debug.Log($"Closest potential target found: node id {closestTarget}");
             }
+            return closestTarget;
         }
         else
         {
@@ -68,7 +65,7 @@ public class CollabScan : BotTemplate
                 {
                     if (gcr.GetIsNodeDiagonalFromSource(allyPos, nodeID))
                     {
-                        continue;
+                        //continue;
                     }
                 }
                 bool markAsMin = false;
@@ -162,18 +159,19 @@ public class CollabScan : BotTemplate
         //Initial setup: only do this when directly following hidden turn
         if (CollabScan.algoPlayerInTurn == 0){
             // Reset this dict when a new round starts
-            if (gcr.turnCount == 0)
-            {
-                CollabScan.possibleLocations = new();
-            }
-            //Make this list for the first time if it doesn't exist yet.
+            // Add the hidden player's spawn if it's the first time (first turn expected)
             if (CollabScan.possibleLocations.Count == 0)
             {
                 for ( int i = 1; i <= mapSizeSq; i++ )
                 {
                     CollabScan.possibleLocations.Add(i, false);
                 }
+                if (gcr.turnCount == 0)
+                {
+                    CollabScan.possibleLocations[gcr.hiddenSpawn.nodeID] = true;
+                }
             }
+            
             //If a node was infected add the surrounding nodes to the possible locations info
             int lastInfected = gcr.lastInfectedNode;
             if (lastInfected < mapSizeSq && lastInfected > 0 )
@@ -181,6 +179,15 @@ public class CollabScan : BotTemplate
                 foreach(int nodeID in gcr.GetAdjacentNodes(lastInfected,3))
                 {
                     CollabScan.possibleLocations[nodeID] = true;
+                }
+            }
+            else
+            // If the last infected node is not applicable
+            {
+                CollabScan.possibleLocations.Clear();
+                for ( int i = 1; i <= mapSizeSq; i++ )
+                {
+                    CollabScan.possibleLocations.Add(i, false);
                 }
             }
         }
