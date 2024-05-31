@@ -742,6 +742,7 @@ public class GameController : MonoBehaviour
             return new int[]{nodeID};
         }
         List<int> connectedNodes = new();
+        connectedNodes.Add(nodeID);
         connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID - mapSize, maxdist-1)).ToList();
         connectedNodes = connectedNodes.Union(GetAdjacentNodes(nodeID + mapSize, maxdist-1)).ToList();
         if(nodeID % mapSize > 1 || nodeID % mapSize == 0)
