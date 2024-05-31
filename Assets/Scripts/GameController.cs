@@ -513,7 +513,7 @@ public class GameController : MonoBehaviour
 
         foreach(int i in closestNodes){
             DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            textPopup.transform.position = transform.position = Node.GetNode(i).transform.position + offset;
+            textPopup.transform.position = Node.GetNode(i).transform.position + offset;
             textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);
         }
         if(logToCSV)
@@ -555,7 +555,8 @@ public class GameController : MonoBehaviour
             }
             int minDist = adjs.Select(id => GetPathLength(id, i)).Min();
             int[] closestAdjs = adjs.Where(adj => GetPathLength(adj, i) == minDist).ToArray();
-            if(closestAdjs.Intersect(selectedAdjs).ToArray().Length == selectedAdjs.Length)
+            //Debug.Log($"Node {i} closest to adjs {string.Join(", ", closestAdjs)}");
+            if(closestAdjs.SequenceEqual(selectedAdjs))
             {
                 possibleNodes.Add(i);
             }
