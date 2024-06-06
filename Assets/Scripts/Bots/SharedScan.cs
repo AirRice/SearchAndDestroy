@@ -61,7 +61,16 @@ public class SharedScan : BotTemplate
                 possibleLocations[id] = false;
             }
         }
-    }
+        Vector3 offset = new(0,0.55f,0);
+        List<int> possibleLocsList = (from kvp in SharedScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        foreach (int location in possibleLocsList)
+        {
+            DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            textPopup.transform.position = Node.GetNode(location).transform.position + offset;
+            textPopup.SetText(location.ToString(), gcr.mainCam);
+            textPopup.SetColor(Color.red);
+        }
+}
 
 
     protected override int GetMovementTarget(int specActionTarget)
@@ -91,9 +100,9 @@ public class SharedScan : BotTemplate
         //Initial setup: only do this when directly following hidden turn
         if (SharedScan.algoPlayerInTurn == 0){
             // Reset this dict when a new round starts
-            if (gcr.turnCount == 0)
+            if (gcr.turnCount == 1)
             {
-                SharedScan.possibleLocations = new();
+                SharedScan.possibleLocations.Clear();
             }
             //Make this list for the first time if it doesn't exist yet. 
             //Add the hidden player's spawn if it's the first time (first turn expected)

@@ -32,4 +32,10 @@ public class DistanceTextPopup : MonoBehaviour
         TextMeshProUGUI textMesh = GetComponentInChildren<TextMeshProUGUI>();
         textMesh.text = text;
     }
+
+    public void SetColor(Color c)
+    {
+        TextMeshProUGUI textMesh = GetComponentInChildren<TextMeshProUGUI>();
+        textMesh.color = c;     
+    }
 }

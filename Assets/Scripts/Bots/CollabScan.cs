@@ -2,21 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
-
+using static System.Math;
 public class CollabScan : BotTemplate
 {
     /**
-    This algorithm considers all available players with this algorithm applied as part of the process. it works in the following order.
-    1. If we have up-to-date info on the trojan player's location from revealed information (newly infected node) this turn assume the relative sector from the centre as info.
-      - However treat this as assumed information; if true information is found it supercedes this.
-    2. First scanner player in the round: Move towards the centre of the map as far as possible, scan on arrival.
-    3. next scanner player(s) in the round:
-      - If the first player could not make it to the centre, move with them.
-      - If the trojan player is found to be on an exact diagonal from the first scan: move n spaces perpendicular towards the diagonal from the previous scanner and scan.
-      - If not: Move to the centre of the sector of the map we know the trojan player is located in and scan.
-    4. repeat step 3 as much as required. 
-
-    Adjusted algorithm:
     1. If we have up-to-date info on the trojan player's location from revealed information (newly infected node) this turn assume the trojan is within 3 nodes of the infected location.
     2. Out of the spaces within 2 nodes, find the space that gives the most information when splitting the currently assumed locations of the trojan.
      - If similar information can be found, pick one randomly.
@@ -27,20 +16,15 @@ public class CollabScan : BotTemplate
     public static Dictionary<int,bool> possibleLocations = new(); //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
     public static int algoPlayerInTurn = 0; // player index only incremented when a player using this algorithm's turn comes around
     public static List<int> algoPlayerLocs = new();
-    private int currentScanTarget = -1;
     public int followDist = 1;
     // How far to go from previous scanners in the case of a diagonal scan ()
-
+    private bool debugLogging = true;
     protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
         List<(int,int[])> prevScans = gcr.scanHistory;
         List<int> possibleLocationsList = (from kvp in CollabScan.possibleLocations where kvp.Value select kvp.Key).ToList();
-        if (currentScanTarget != -1)
-        {
-            return currentScanTarget;
-        }
-        if (((double)possibleLocationsList.Count/gcr.mapSize * gcr.mapSize <= 0.3 || gcr.currentTurnPlayer == gcr.playersCount-1) && possibleLocationsList.Count > 0) 
+        if (((double)possibleLocationsList.Count/gcr.mapSize * gcr.mapSize <= 0.5 || CollabScan.algoPlayerInTurn == gcr.playersCount-2) && possibleLocationsList.Count > 0) 
         {
             // If we are the last scanner or there's a small number of possible locations, scan the nearest
             int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
@@ -59,27 +43,24 @@ public class CollabScan : BotTemplate
             int[] allNodes = Enumerable.Range(1, gcr.mapSize*gcr.mapSize+1).ToArray();
             double min = 9999;
             int minNode = -1;
-            foreach(int nodeID in gcr.GetAdjacentNodes(currentLocation,2))
+            foreach(int nodeID in gcr.GetAdjacentNodes(currentLocation, gcr.currentPlayerMoves - 1))
             {
                 foreach(int allyPos in algoPlayerLocs)
                 {
                     if (gcr.GetIsNodeDiagonalFromSource(allyPos, nodeID))
                     {
-                        //continue;
+                        continue;
                     }
                 }
                 bool markAsMin = false;
                 double sd = gcr.ScanStandardDeviation(possibleLocationsList.Count <= 0 ? allNodes : possibleLocationsList.ToArray() ,nodeID);
-                if (sd < min)
+                if (Abs(sd - min) < 0.1 && Random.value >= 0.5)
                 {
                     markAsMin = true;
                 }
-                else if (sd == min)
+                else if (sd < min)
                 {
-                    if (algoPlayerInTurn == 0 && Random.value >= 0.5)
-                    {
-                        markAsMin = true;
-                    }
+                    markAsMin = true;
                 }
                 if (markAsMin)
                 {
@@ -91,19 +72,16 @@ public class CollabScan : BotTemplate
             {
                 Debug.Log($"Scanning Node {minNode}");
             }
-            currentScanTarget = minNode;
             return minNode;
         }
-        return -1;
     }
 
     protected override void OnSpecialAction(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
         if (gcr.scanHistory.Count == 0)
-         return;
-        (int,int[]) prevScan = gcr.scanHistory[gcr.scanHistory.Count -1];
-        currentScanTarget = -1;
+            return;
+        (int,int[]) prevScan = gcr.scanHistory[^1];
         // recalculate the possible locations
         // prune if they do not meet the requirements
         if(prevScan.Item2.Length >= 1)
@@ -114,17 +92,41 @@ public class CollabScan : BotTemplate
             }
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(prevScan.Item1, prevScan.Item2);
             List<int> possibleLocsList = (from kvp in CollabScan.possibleLocations where kvp.Value select kvp.Key).ToList();
-            foreach (int id in (possibleLocsList.Count > 0) ? possibleLocsList.Except(nodesInDir).ToList() : nodesInDir)
+            if (possibleLocsList.Count > 0)
             {
-                possibleLocations[id] = false;
+                int[] possible_truncated = possibleLocsList.Except(nodesInDir).ToArray();
+                foreach (int id in possible_truncated)
+                {
+                    CollabScan.possibleLocations[id] = false;
+                }
+            }
+            else
+            {
+                foreach (int id in nodesInDir)
+                {
+                    CollabScan.possibleLocations[id] = true;
+                }
             }
 
+            possibleLocsList = (from kvp in CollabScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+            Vector3 offset = new(0,0.55f,0);
+
+            // Uncomment to see scan knowledge pool information
+            
+            foreach (int location in possibleLocsList)
+            {
+                DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+                textPopup.transform.position = Node.GetNode(location).transform.position + offset;
+                textPopup.SetText(location.ToString(), gcr.mainCam);
+                textPopup.SetColor(Color.red);
+            }
         }
     }
 
     protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
+        List<int> possibleLocationsList = (from kvp in CollabScan.possibleLocations where kvp.Value select kvp.Key).ToList();
         if (specActionTarget != -1)
         {
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
@@ -166,12 +168,14 @@ public class CollabScan : BotTemplate
                 {
                     CollabScan.possibleLocations.Add(i, false);
                 }
-                if (gcr.turnCount == 0)
+            }
+            if (gcr.turnCount == 1)
+            {
+                foreach(int nodeID in gcr.GetAdjacentNodes(gcr.hiddenSpawn.nodeID,3))
                 {
-                    CollabScan.possibleLocations[gcr.hiddenSpawn.nodeID] = true;
+                    CollabScan.possibleLocations[nodeID] = true;
                 }
             }
-            
             //If a node was infected add the surrounding nodes to the possible locations info
             int lastInfected = gcr.lastInfectedNode;
             if (lastInfected < mapSizeSq && lastInfected > 0 )
@@ -188,6 +192,15 @@ public class CollabScan : BotTemplate
                 for ( int i = 1; i <= mapSizeSq; i++ )
                 {
                     CollabScan.possibleLocations.Add(i, false);
+                }
+            }
+            int[] locationsToPropagate = (from kvp in CollabScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
+            //Grow the search space size if a turn has passed, because the hidden player may have moved.
+            foreach(int locID in locationsToPropagate)
+            {
+                foreach(int nodeID in gcr.GetAdjacentNodes(locID, 3))
+                {
+                    CollabScan.possibleLocations[nodeID] = true;
                 }
             }
         }
