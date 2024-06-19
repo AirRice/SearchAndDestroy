@@ -6,6 +6,7 @@ using System.Text.RegularExpressions; //for the file handling
 using System;
 using System.IO;
 using System.Linq;
+using HuggingFace.API;
 using Random = UnityEngine.Random;
 public class GameController : MonoBehaviour
 {
@@ -459,7 +460,8 @@ public class GameController : MonoBehaviour
         }
         return false;
     }
-
+    private readonly string[] TrojanPersonality = {"gloating", "arrogant", "playful"};
+    private readonly string[] ScannerPersonality = {"professional", "stoic", "determined"};
     //Infect the specified node. (Trojan Player only)
     public bool TryNodeInfect(Node toInfect)
     {
@@ -470,7 +472,8 @@ public class GameController : MonoBehaviour
         if(logToCSV)
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
-        }    
+        }
+        GenerateStatusString(currentTurnPlayer, TrojanPersonality);
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
@@ -519,7 +522,8 @@ public class GameController : MonoBehaviour
         if(logToCSV)
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
-        }    
+        }
+        GenerateStatusString(currentTurnPlayer, ScannerPersonality);
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
@@ -676,6 +680,50 @@ public class GameController : MonoBehaviour
         }
     }
 
+    // STRING BUILDING FOR TEXT GENERATION API
+    private readonly string introString = "Assume you are playing the role of a player participating in a game.";
+    private readonly string tWinCondition = " The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your location is hidden to them so they must find you by searching the map.";
+    private readonly string sWinCondition = " The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.";
+    public void GenerateStatusString(int player, string[] personalityParams = null)
+    {
+        personalityParams = personalityParams ?? new string[0];
+
+        string playerCountString = player == 0 ? "the only player" : $"one of {playersCount-1} players";
+        string playerCountEnemyString = player == 0 ? $"are {playersCount-1} players" : "is only a single player";
+        string playerInfoString = $"You are {playerCountString} on your team. There {playerCountEnemyString} on the enemy team.";
+        if (personalityParams.Length > 0 )
+        {
+            string personality = string.Join(",", personalityParams);
+            playerInfoString = playerInfoString + $"You have a {personality} personality.";
+        }
+        string playerActionString = player == 0 ? "infected a node" : "scanned and better know the vague direction of where the enemy player is"; 
+
+        string lastActionString = $" You have just {playerActionString}, ";
+        if (player == 0)
+        {
+            lastActionString = lastActionString + $"and you only need to infect {targetNodeIDs.Count - infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} out of {targetNodeIDs.Count} objectives to win.";
+        }
+        else
+        {
+            lastActionString = lastActionString + $"Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} are currently infected.";
+        }
+        string inputTextEnding = "Given this information, please generate a single comment that you would say to the enemy players in this situation and an associated emotion that you feel. Talk in a casual online chatroom-like manner. A Sample comment is given below. Respond in this format. Do not repeat the wording verbatim. [Emotion: Fearful][Comment: that's a bit close, not sure if I can win this one]";
+
+        string inputText = introString + (player == 0 ? tWinCondition : sWinCondition) + playerInfoString + lastActionString + inputTextEnding;
+        Debug.Log(inputText);
+        HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
+    }
+    void OnAPIResult(string result)
+    {
+        // Add some regex to split out the emotions here
+        result = result.Split('\n').Last();
+        gameHud.PlayerDialogue(currentTurnPlayer, result);
+        Debug.Log(result);
+    }
+    void OnAPIError(string error) 
+    {
+        Debug.LogError(error);
+    }
 
     // CLIENTSIDE EVENT HANDLING
     public void OnNodeHovered(Node thisNode)

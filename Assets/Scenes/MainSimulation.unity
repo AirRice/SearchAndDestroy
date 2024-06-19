@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028331, g: 0.2257133, b: 0.3069217, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -164,6 +164,7 @@ MonoBehaviour:
   hotSeatMode: 1
   logToCSV: 0
   useSmoothMove: 0
+  autoProgressTurn: 0
   playerPrefab: {fileID: 890269969164875875, guid: ac7ed008763f8ff4facf279b9737043a, type: 3}
   nodePrefab: {fileID: 7516172660082148511, guid: 08444620d4235134ab98623f6dc1f49c, type: 3}
   textPopupPrefab: {fileID: 2137901176250374956, guid: a8c1d198f8e681348955b56bd2d34a0a, type: 3}
@@ -419,7 +420,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 70
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -466,9 +467,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 15
   edgesize: 10
-  scrollSensitivity: 0.5
+  scrollSensitivity: 100
   verticalInput: 0
   horizontalInput: 0
+  mWheelInput: 0
   defaultPos: {x: 0, y: 0, z: 0}
   defaultCamHei: 0
 --- !u!1 &1009926978

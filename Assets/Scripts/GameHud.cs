@@ -13,6 +13,7 @@ public class GameHud : MonoBehaviour
     private Label labelCentreText;
     private Label labelTurnCounter;
     private Label labelGameoverText;
+    private Label labelPlayerDialogue;
     private Button buttonEndTurn;
     private Button buttonPlayerAction;
     private Button buttonRestartGame;
@@ -33,6 +34,7 @@ public class GameHud : MonoBehaviour
         labelGameoverText = overlay.Q<Label>("LabelGameOver");
         labelCentreText = overlay.Q<Label>("LabelCentre");
         labelBottomText = overlay.Q<Label>("LabelBottomText");
+        labelPlayerDialogue = root.Q<Label>("LabelPlayerDialogue");
         buttonRestartGame = overlay.Q<Button>("ButtonRestartGame");
 
         buttonEndTurn.RegisterCallback<ClickEvent>(EndTurnOnClicked);
@@ -131,6 +133,11 @@ public class GameHud : MonoBehaviour
         {
             labelsMoveIndicator[i].style.left = i < tospend ? 24 : 0;
         }
+    }
+
+    public void PlayerDialogue(int player, string msg)
+    {
+        labelPlayerDialogue.text = $"Player {player}: " + msg;
     }
     public void ShowCentreMessage(string msg)
     {

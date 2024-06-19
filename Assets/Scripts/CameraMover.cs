@@ -6,9 +6,10 @@ public class CameraMover : MonoBehaviour
 {
     public float speed = 15f;
     public float edgesize = 10f;
-    public float scrollSensitivity = 10f;
+    public float scrollSensitivity = 100f;
     public float verticalInput;
     public float horizontalInput;
+    public float mWheelInput;
 
     public Vector3 defaultPos;
     public float defaultCamHei;
@@ -29,7 +30,7 @@ public class CameraMover : MonoBehaviour
         }
         verticalInput = Input.GetAxis("Vertical");
         horizontalInput = Input.GetAxis("Horizontal");
-
+        mWheelInput = Input.GetAxis("Mouse ScrollWheel");
 
         /*float mousePosX = Input.mousePosition.x;
         float mousePosY = Input.mousePosition.y;
@@ -47,7 +48,9 @@ public class CameraMover : MonoBehaviour
             verticalInput = -1f;
         }       
         */
+
         transform.Translate(speed * verticalInput * Time.deltaTime * Vector3.up);
         transform.Translate(speed * horizontalInput * Time.deltaTime * Vector3.right);
+        transform.Translate(scrollSensitivity * mWheelInput * Time.deltaTime * Vector3.forward);
     }
 }
