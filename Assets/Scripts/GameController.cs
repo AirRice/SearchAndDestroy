@@ -775,7 +775,7 @@ public class GameController : MonoBehaviour
         TextAPIResponse response = JsonUtility.FromJson<TextAPIResponse>(matches[^1].Value);
         string responseFormatted = ChatFormat(response.comment);
         chatHistory.Add($"Player {response.player}: " + responseFormatted);
-        gameHud.PlayerDialogue(currentTurnPlayer, responseFormatted);
+        gameHud.PlayerDialogue(currentTurnPlayer, response.emotion, responseFormatted);
         
     }
     void OnAPIError(string error) 

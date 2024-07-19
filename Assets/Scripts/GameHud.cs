@@ -20,10 +20,12 @@ public class GameHud : MonoBehaviour
     public bool playerActionButtonDown;
     private bool lastPlayerActionButtonDown;
     private float lastDisplayedCentreMessage;
+    private VisualElement emotionImage;
     private void OnEnable()
     {
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
         VisualElement overlay = root.Q<VisualElement>("Overlay");
+        
         labelCurPlayer = root.Q<Label>("LabelCurPlayer");
         labelTurnCounter = root.Q<Label>("LabelTurnCounter");
         buttonEndTurn = root.Q<Button>("ButtonEndTurn");
@@ -34,7 +36,10 @@ public class GameHud : MonoBehaviour
         labelGameoverText = overlay.Q<Label>("LabelGameOver");
         labelCentreText = overlay.Q<Label>("LabelCentre");
         labelBottomText = overlay.Q<Label>("LabelBottomText");
+
         labelPlayerDialogue = root.Q<Label>("LabelPlayerDialogue");
+        emotionImage = root.Q<VisualElement>("BottomChatAvatar");
+
         buttonRestartGame = overlay.Q<Button>("ButtonRestartGame");
 
         buttonEndTurn.RegisterCallback<ClickEvent>(EndTurnOnClicked);
@@ -135,8 +140,17 @@ public class GameHud : MonoBehaviour
         }
     }
 
-    public void PlayerDialogue(int player, string msg)
+    public void PlayerDialogue(int player, string emotion, string msg)
     {
+        Texture2D emotionImg = Resources.Load<Texture2D>("Images/emotions/"+emotion);
+        if (emotionImg)
+        {
+            emotionImage.style.backgroundImage = emotionImg;
+        }
+        else
+        {
+            emotionImage.style.backgroundImage = null;
+        }
         labelPlayerDialogue.text = $"Player {player}: " + msg;
     }
     public void ShowCentreMessage(string msg)
