@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions; //for the file handling
 using System;
 using System.IO;
+using System.Text;
 using System.Linq;
 using HuggingFace.API;
 using Random = UnityEngine.Random;
@@ -54,6 +55,8 @@ public class GameController : MonoBehaviour
     //Scan History is (node id, distance to hidden player)
     private Dictionary<(int,int), int[]> cachedPaths = new();
     private bool nodeWasInfectedLastTurn = false;
+    public List<string> chatHistory = new();
+    public List<int> chattedCurrentTurn;
     private void Awake()
     {
         //enforce singleton
@@ -132,6 +135,7 @@ public class GameController : MonoBehaviour
         cachedPaths = new Dictionary<(int,int), int[]>();
         nodeWasInfectedLastTurn = false;
         FileLogger.mainInstance.IncrementRound();
+        chatHistory.Clear();
         
         if(restart){
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
@@ -393,6 +397,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|0|{GetActivePlayerPosition()}|{toMoveTo}");
         }
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 0, GetActivePlayerPosition(), new[] {toMoveTo}, 0.25f);
         if(useSmoothMove)
         {
             PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
@@ -473,7 +478,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
         }
-        GenerateStatusString(currentTurnPlayer, TrojanPersonality);
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), new[] {toInfect.nodeID});
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
@@ -523,7 +528,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
         }
-        GenerateStatusString(currentTurnPlayer, ScannerPersonality);
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), closestNodes.ToArray());
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
@@ -588,13 +593,17 @@ public class GameController : MonoBehaviour
     }
     public int GetActivePlayerPosition()
     {
-        if(currentTurnPlayer==0)
+        return GetPlayerPosition(currentTurnPlayer);
+    }
+    protected int GetPlayerPosition(int player)
+    {
+        if(currentTurnPlayer!=0 && player == 0)
         {
-            return hiddenPlayerLocation;
+            return -1;
         }
-        else 
+        else
         {
-            return hunterPlayerLocations[currentTurnPlayer-1];
+            return (player == 0) ? hiddenPlayerLocation : hunterPlayerLocations[player-1];
         }
     }
     public void ProgressTurn(bool increment = true)
@@ -639,6 +648,7 @@ public class GameController : MonoBehaviour
             SharedScan.algoPlayerInTurn = 0;
             CollabScan.algoPlayerInTurn = 0;
             CollabScan.algoPlayerLocs = new();
+            chattedCurrentTurn.Clear();
             this.StartHiddenTurn();
         }
         else if(localPlayerID != 0)
@@ -681,48 +691,108 @@ public class GameController : MonoBehaviour
     }
 
     // STRING BUILDING FOR TEXT GENERATION API
-    private readonly string introString = "Assume you are playing the role of a player participating in a game.";
-    private readonly string tWinCondition = " The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your location is hidden to them so they must find you by searching the map.";
-    private readonly string sWinCondition = " The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.";
-    public void GenerateStatusString(int player, string[] personalityParams = null)
+
+    // Prompt tuned for Mistral 7B
+    private readonly string tWinCondition = "The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your \n";
+    private readonly string sWinCondition = "The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.\n";
+    public void GenerateStatusString(int turn, int player, int actiontype, int nodeFrom, int[] nodeTargets, float sendChatChance = 1.0f, string[] personalityParams = null)
     {
+        // Only generate this sometimes
+        if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
+        {
+            return;
+        }
+
         personalityParams = personalityParams ?? new string[0];
+        
+        string instruction = $"TASK:\nGenerate a chat message from player {player} to the other players at this moment.  Also associate an emotion with player {player} at the moment. Pick one of these emotions: angry, confused, content, fear, gloating, happy, sad, surprised.\n";
+
+        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system, and all other players are Scanners trying to find and purge the virus. The Trojan is trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. The Scanners are trying to deduce the Trojan's location and purge it. The Trojan's location is hidden to the Scanners normally. By scanning, Scanner players learn which adjacent nodes are closest to the trojan. \nGAME STATE:\nThe players are at nodes:\n";
+
+        for(int i = 0; i < playersCount; i++)
+        {
+            if (i == 0 && player == 0 || i != 0)
+            {
+                gameDefinition = gameDefinition + $"Player {i}: Node {GetPlayerPosition(i)}\n";
+            }
+        }
 
         string playerCountString = player == 0 ? "the only player" : $"one of {playersCount-1} players";
-        string playerCountEnemyString = player == 0 ? $"are {playersCount-1} players" : "is only a single player";
-        string playerInfoString = $"You are {playerCountString} on your team. There {playerCountEnemyString} on the enemy team.";
+        string playerInfoString = $"{(player == 0 ? $"Player {player} is the Trojan, being " : $"Player {player} is one of the Scanners, being")} {playerCountString} on their team.";
+
+        playerInfoString = playerInfoString + " Assume the Trojan wants to stay hidden and will not give away information about their location, and Scanner players will try to work together.";
         if (personalityParams.Length > 0 )
         {
             string personality = string.Join(",", personalityParams);
-            playerInfoString = playerInfoString + $"You have a {personality} personality.";
+            playerInfoString = playerInfoString + $"Player {player} has a {personality} personality.";
         }
-        string playerActionString = player == 0 ? "infected a node" : "scanned and better know the vague direction of where the enemy player is"; 
 
-        string lastActionString = $" You have just {playerActionString}, ";
-        if (player == 0)
+        string lastActionString = "";
+        switch (actiontype)
         {
-            lastActionString = lastActionString + $"and you only need to infect {targetNodeIDs.Count - infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} out of {targetNodeIDs.Count} objectives to win.";
+            case 0:
+                lastActionString = $"moved from node {nodeFrom} to {nodeTargets[0]}";
+                break;
+            case 1:
+                if (player == 0)
+                {
+                    lastActionString = $"infected node {nodeTargets[0]}";
+                }
+                else
+                {
+                    lastActionString = $"scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", nodeTargets)}";
+                }
+                break;
+            default:
+                break;
         }
-        else
-        {
-            lastActionString = lastActionString + $"Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} are currently infected.";
-        }
-        string inputTextEnding = "Given this information, please generate a single comment that you would say to the enemy players in this situation and an associated emotion that you feel. Talk in a casual online chatroom-like manner. A Sample comment is given below. Respond in this format. Do not repeat the wording verbatim. [Emotion: Fearful][Comment: that's a bit close, not sure if I can win this one]";
+        string playerActionString = $" Player {player} has just {lastActionString}.";
 
-        string inputText = introString + (player == 0 ? tWinCondition : sWinCondition) + playerInfoString + lastActionString + inputTextEnding;
-        Debug.Log(inputText);
+        string extraInfoString = $" Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} have been infected so far. This is turn number {turn}. ";
+
+        string prevChat = "";
+        if (chatHistory.Count > 0)
+        {
+            prevChat = "\n\nPREVIOUS CHAT LOG:\n";
+            foreach(string chat in chatHistory)
+            {
+                prevChat = prevChat + chat + "\n";
+            }
+        }
+
+        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": <PLAYER NUMBER>, \"emotion\": <EMOTION> (SELECTED BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised),\"comment\":<GENERATED COMMENT>}\n ANSWER:\n";
+
+        string inputText = instruction + gameDefinition + playerInfoString + playerActionString + extraInfoString + prevChat + responseFormatting;
+        chattedCurrentTurn.Add(player);
+        //Debug.Log(inputText);
         HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
     }
+
     void OnAPIResult(string result)
     {
-        // Add some regex to split out the emotions here
-        result = result.Split('\n').Last();
-        gameHud.PlayerDialogue(currentTurnPlayer, result);
         Debug.Log(result);
+        MatchCollection matches = Regex.Matches(result, @"(\{[^}]+\})");
+        TextAPIResponse response = JsonUtility.FromJson<TextAPIResponse>(matches[^1].Value);
+        string responseFormatted = ChatFormat(response.comment);
+        chatHistory.Add($"Player {response.player}: " + responseFormatted);
+        gameHud.PlayerDialogue(currentTurnPlayer, responseFormatted);
+        
     }
     void OnAPIError(string error) 
     {
         Debug.LogError(error);
+    }
+    public string ChatFormat(string s)
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (char c in s)
+        {
+            if (!char.IsPunctuation(c))
+            {
+                sb.Append(char.ToLower(c));
+            }
+        }
+        return sb.ToString();
     }
 
     // CLIENTSIDE EVENT HANDLING
@@ -965,4 +1035,11 @@ public class GameController : MonoBehaviour
         }
         return list;
     }
+}
+
+[System.Serializable]
+public class TextAPIResponse{
+    public int player;
+    public string emotion;
+    public string comment;
 }
