@@ -44,6 +44,7 @@ public class GameController : MonoBehaviour
     public int currentTurnPlayer = 0;
     public string[] playerBotType;
     private BotTemplate[] playerBotControllers;
+    private BotProfile[] playerBotProfiles;
     public Dictionary<int, BotTemplate> playerBotsDict = new();
     public bool gameEnded = false;
     public int turnCount = 0;
@@ -224,24 +225,52 @@ public class GameController : MonoBehaviour
         #endif
     }
 
+    // BOT PROFILES
+    public static readonly List<BotProfile> BotProfiles = new()
+    {
+        new BotProfile("CautiousClosestScanner", "ClosestScan", "Cautious, Professional"),
+        new BotProfile("HotHeadedClosestScanner", "ClosestScan", "Hotheaded, Tense, Jumpy"),
+        new BotProfile("FriendlyClosestScanner", "ClosestScan", "Friendly, Jovial"),
+        new BotProfile("CautiousMiddleSplitScanner", "MiddleSplitScan", "Cautious, Professional"),
+        new BotProfile("HotHeadedMiddleSplitScanner", "MiddleSplitScan", "Hotheaded, Tense, Jumpy"),
+        new BotProfile("FriendlyMiddleSplitScanner", "MiddleSplitScan", "Friendly, Jovial"),
+        new BotProfile("CockyGreedyTrojan", "GreedyTrojan", "Cocky, Witty"),
+        new BotProfile("HeatedGreedyTrojan", "GreedyTrojan", "Heated, Hotheaded"),
+        new BotProfile("CautiousTrojan", "CautiousTrojan", "Cautious, Cowardly, Nervous")
+    };
+
     // Sets up the AI agents depending on the file-specified bot templates.
     void SetupBotPlayers()
     {
         playerBotControllers = new BotTemplate[playersCount];
+        playerBotProfiles = new BotProfile[playersCount];
         for (int i=0; i < playersCount; i++)
         {
-            Type botType = Type.GetType(playerBotType[i]);
+            Debug.Log(BotProfiles.Where(v => v.name.Equals(playerBotType[i])).ToArray().Length);
+            BotProfile botProfile = BotProfiles.Where(v => v.name.Equals(playerBotType[i])).DefaultIfEmpty(null).First();
+            Type botType = Type.GetType(botProfile.bottype);
+            //Type botType = Type.GetType(playerBotType[i]);
             //Debug.Log(playerBotType[i]);
             //Debug.Log($"Is defined: {botType != null}");
             if (botType != null)
             {
                 noBotPlayers = false;
             }
+            playerBotProfiles[i] = botProfile;
             playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
             if (playerBotControllers[i] != null)
             {
-                playerBotControllers[i].SetHidden( i==0 );
+                playerBotControllers[i].SetPlayerID( i );
             }
+        }
+    }
+
+    public void IncrementMoodMultiple(int origin, bool allies, bool positive)
+    {
+        for (int i=0; i < playersCount; i++)
+        {
+            bool sameTeam = (allies && origin != 0 && i != 0);
+            playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (sameTeam ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
         }
     }
 
@@ -397,7 +426,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|0|{GetActivePlayerPosition()}|{toMoveTo}");
         }
-        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 0, GetActivePlayerPosition(), new[] {toMoveTo}, 0.25f);
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 0, GetActivePlayerPosition(), new[] {toMoveTo}, 0.25f, BotProfiles[currentTurnPlayer].personality);
         if(useSmoothMove)
         {
             PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
@@ -478,7 +507,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
         }
-        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), new[] {toInfect.nodeID});
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), new[] {toInfect.nodeID}, 1, BotProfiles[currentTurnPlayer].personality);
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
@@ -528,7 +557,7 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
         }
-        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), closestNodes.ToArray());
+        GenerateStatusString(GetTurnNumber(), currentTurnPlayer, 1, GetActivePlayerPosition(), closestNodes.ToArray(), 1, BotProfiles[currentTurnPlayer].personality);
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
@@ -645,9 +674,9 @@ public class GameController : MonoBehaviour
         if(currentTurnPlayer==0)
         {
             // Reset the per turn player index for the algorithms
-            SharedScan.algoPlayerInTurn = 0;
-            CollabScan.algoPlayerInTurn = 0;
-            CollabScan.algoPlayerLocs = new();
+            ClosestScan.algoPlayerInTurn = 0;
+            MiddleSplitScan.algoPlayerInTurn = 0;
+            MiddleSplitScan.algoPlayerLocs = new();
             chattedCurrentTurn.Clear();
             this.StartHiddenTurn();
         }
@@ -660,7 +689,7 @@ public class GameController : MonoBehaviour
         {
             //Handle automatic turn
             int currentPlayerNode = GetActivePlayerPosition();
-            playerBotControllers[currentTurnPlayer].ProcessTurn(currentTurnPlayer, currentPlayerNode, currentPlayerMoves);
+            playerBotControllers[currentTurnPlayer].ProcessTurn(currentPlayerNode, currentPlayerMoves);
         }
     }
 
@@ -695,7 +724,7 @@ public class GameController : MonoBehaviour
     // Prompt tuned for Mistral 7B
     private readonly string tWinCondition = "The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your \n";
     private readonly string sWinCondition = "The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.\n";
-    public void GenerateStatusString(int turn, int player, int actiontype, int nodeFrom, int[] nodeTargets, float sendChatChance = 1.0f, string[] personalityParams = null)
+    public void GenerateStatusString(int turn, int player, int actiontype, int nodeFrom, int[] nodeTargets, float sendChatChance = 1.0f, string personalityParams = null)
     {
         // Only generate this sometimes
         if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
@@ -703,7 +732,7 @@ public class GameController : MonoBehaviour
             return;
         }
 
-        personalityParams = personalityParams ?? new string[0];
+        personalityParams = personalityParams ?? "";
         
         string instruction = $"TASK:\nGenerate a chat message from player {player} to the other players at this moment.  Also associate an emotion with player {player} at the moment. Pick one of these emotions: angry, confused, content, fear, gloating, happy, sad, surprised.\n";
 
@@ -723,8 +752,8 @@ public class GameController : MonoBehaviour
         playerInfoString = playerInfoString + " Assume the Trojan wants to stay hidden and will not give away information about their location, and Scanner players will try to work together.";
         if (personalityParams.Length > 0 )
         {
-            string personality = string.Join(",", personalityParams);
-            playerInfoString = playerInfoString + $"Player {player} has a {personality} personality.";
+            //string personality = string.Join(",", personalityParams);
+            playerInfoString = playerInfoString + $"Player {player} has a {personalityParams} personality.";
         }
 
         string lastActionString = "";
@@ -787,10 +816,11 @@ public class GameController : MonoBehaviour
         StringBuilder sb = new StringBuilder();
         foreach (char c in s)
         {
-            if (!char.IsPunctuation(c))
+            sb.Append(c);
+            /*if (!char.IsPunctuation(c))
             {
                 sb.Append(char.ToLower(c));
-            }
+            }*/
         }
         return sb.ToString();
     }
@@ -1034,6 +1064,17 @@ public class GameController : MonoBehaviour
             list[randIndex] = temp;
         }
         return list;
+    }
+}
+
+public class BotProfile{
+    public string name;
+    public string bottype;
+    public string personality;
+    public BotProfile(string name, string bottype, string personality){
+        this.name = name;
+        this.bottype = bottype;
+        this.personality = personality;
     }
 }
 

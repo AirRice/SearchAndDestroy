@@ -43,9 +43,13 @@ public class SettingsHud : MonoBehaviour
         buttonRemoveRun = root.Q<Button>("buttonRemoveRun");
 
         radioButtonGroupSelectRun = root.Q<RadioButtonGroup>("radioGroupSelectRun");
-        // Update this for when algorithms get added later
-        List<string> trojanModes = new() { "GreedyTrojan", "CautiousTrojan", "MCTSTrojan", "HumanPlayer"};
-        List<string> scannerModes = new() { "SoloScan", "SharedScan", "CollabScan", "HumanPlayer"};
+        
+        List<string> botProfilesList = new(); 
+        foreach (BotProfile pf in GameController.BotProfiles)
+        {
+            botProfilesList.Add(pf.name);
+        }
+        botProfilesList.Add("Human");
 
         botDropdownList.Add(root.Q<DropdownField>("trojanBotDropdown"));
         botDropdownList.Add(root.Q<DropdownField>("hunterBot1Dropdown"));
@@ -54,7 +58,7 @@ public class SettingsHud : MonoBehaviour
         botDropdownList.Add(root.Q<DropdownField>("hunterBot4Dropdown"));
         for(int i = 0; i < botDropdownList.Count; i++)
         {
-            botDropdownList[i].choices = i == 0 ? trojanModes : scannerModes;
+            botDropdownList[i].choices = botProfilesList;
         }
         maxRoundsField.RegisterCallback<ChangeEvent<string>>(MaxRoundsFieldOnChanged);
         buttonStartGame.RegisterCallback<ClickEvent>(StartGameOnClicked);

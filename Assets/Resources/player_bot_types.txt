@@ -1,1 +1,1 @@
-GreedyTrojan;SharedScan;SharedScan
+GreedyTrojan;ClosestScan;ClosestScan
