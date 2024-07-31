@@ -72,3 +72,4 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 /[Aa]ssets/[Rr]esources/HuggingFaceAPIConfig.asset
 Assets/Resources/groqAPIKey.txt
+Assets/Resources/groqAPIKey.txt.meta
