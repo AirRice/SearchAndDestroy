@@ -126,7 +126,7 @@ public abstract class BotTemplate : ScriptableObject
     private readonly Dictionary<string, string> EmotionBarkFilepaths = new(){
         {"Relief", "Barks/relief"},
         {"Resignation", "Barks/fearsconfirmed"}, // Resignation is Fears Confirmed in OCC Model.
-        {"Satisfaction", "Barks/satisfaction"},
+        {"Content", "Barks/content"}, //Content is Satisfaction in OCC Model
         {"Disappointment", "Barks/disappointment"},
         {"Joy", "Barks/joy"},
         {"Distress", "Barks/distress"},
@@ -166,7 +166,7 @@ public abstract class BotTemplate : ScriptableObject
             if (currentMood > 0)
             {
                 // Satisfaction, Gloating
-                return "Satisfaction";
+                return "Content"; 
             }
             else if (currentMood < 0)
             {
