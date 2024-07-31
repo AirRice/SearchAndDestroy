@@ -1,64 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Text;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
 namespace GroqApiLibrary
 {
-    public class GroqApiClient : IDisposable
+    public class GroqApiClient : IGroqApiClient
     {
-        private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://api.groq.com/openai/v1/chat/completions";
+        private readonly HttpClient client = new();
 
         public GroqApiClient(string apiKey)
         {
-            _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
         }
 
-        public async Task<JsonObject?> CreateChatCompletionAsync(JsonObject request)
+        //The available request parameters are listed in the Groq API documentation at https://console.groq.com/docs/text-chat
+        public async Task<JObject> CreateChatCompletionAsync(JObject request)
         {
-            var response = await _httpClient.PostAsJsonAsync(BaseUrl, request);
+            StringContent httpContent = new StringContent(request.ToString(), Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync("https://api.groq.com/openai/v1/chat/completions", httpContent);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<JsonObject>();
-        }
+            string responseString = await response.Content.ReadAsStringAsync();
 
-        public async IAsyncEnumerable<JsonObject?> CreateChatCompletionStreamAsync(JsonObject request)
-        {
-            request["stream"] = true;
-            var content = new StringContent(request.ToJsonString(), Encoding.UTF8, "application/json");
-
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Post, BaseUrl) { Content = content };
-            using var response = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var reader = new StreamReader(stream);
-
-            string? line;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                if (line.StartsWith("data: "))
-                {
-                    var data = line["data: ".Length..];
-                    if (data != "[DONE]")
-                    {
-                        yield return JsonSerializer.Deserialize<JsonObject>(data);
-                    }
-                }
-            }
-        }
-
-        public void Dispose()
-        {
-            _httpClient.Dispose();
-            GC.SuppressFinalize(this);
+            JObject responseJson = JObject.Parse(responseString);
+            return responseJson;
         }
     }
 }

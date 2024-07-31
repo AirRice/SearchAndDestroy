@@ -2,40 +2,37 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using GroqApiLibrary;
-using System.Text.Json.Nodes;
+using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 public class GroqAPIHandler
 {
     private static readonly string APIKeyPath = System.IO.Path.Combine(Application.dataPath, "/Resources/groqAPIKey.txt");
-    public async Task Main(string[] args)
+    public static async Task TextGeneration(string inputText)
     {
         string apiKey = System.IO.File.ReadAllText(APIKeyPath);
-        var groqApi = new GroqApiClient(apiKey);
+        IGroqApiClient groqApi = new GroqApiClient(apiKey);
 
-        var request = new JsonObject
+        JObject request = new()
         {
             ["model"] = "llama3-70b-8192", // Other models: llama2-70b-chat, gemma-7b-it, llama3-70b-8192, llama3-8b-8192
             ["temperature"] = 0.75,
             ["max_tokens"] = 100,
             ["top_p"] = 1,
             ["stop"] = "TERMINATE",
-            ["messages"] = new JsonArray
+            ["messages"] = new JArray
             {
-                new JsonObject
+                new JObject
                 {
                     ["role"] = "system",
-                    ["content"] = "You are a helpful assistant."
-                },
-                new JsonObject
-                {
-                    ["role"] = "user",
-                    ["content"] = "Write a haiku about coding."
+                    ["content"] = inputText
                 }
             }
         };
 
-        var result = await groqApi.CreateChatCompletionAsync(request);
-        var response = result?["choices"]?[0]?["message"]?["content"]?.ToString() ?? "No response found";
-        Console.WriteLine(response);
+        JObject result = await groqApi.CreateChatCompletionAsync(request);
+
+        string response = result["choices"]?[0]?["message"]?["content"]?.ToString() ?? "No response found";
+        
     }
 }
