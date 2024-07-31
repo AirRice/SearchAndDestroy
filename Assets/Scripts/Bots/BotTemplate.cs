@@ -142,37 +142,65 @@ public abstract class BotTemplate : ScriptableObject
         int randIndex = Random.Range(0,allLines.Length);
         return allLines[randIndex];
     }
-
+    public float GetCurrentMood()
+    {
+        return currentMood;
+    }
     public string GetCurrentEmotion()
     {
+        GameController gcr = GameController.gameController;
         Debug.Log($"Player {playerID} current mood: {currentMood} prev mood: {prevMood}");
+        float othersMood = gcr.GetOthersAvgMood(playerID == 0 ? 0 : 1);
         if(prevMood < 0)
         {
             //Fear - Expected consequence negative
             if (currentMood > 0)
             {
-                // Relief, Gloating
+                // Relief
                 return "Relief";
             }
             else if (currentMood < 0)
             {
-                //Resignation, Resentment
+                //Resignation
                 return "Resignation";
             }
-
+            else{
+                if (othersMood > 0)
+                {
+                    // Resentment
+                    return "Resentment";
+                }
+                else if (othersMood < 0)
+                {
+                    // Gloating
+                    return "Gloating";
+                }
+            }
         }
         else if(prevMood > 0)
         {
             //Hope - Expected consequence positive
             if (currentMood > 0)
             {
-                // Satisfaction, Gloating
+                // Satisfaction
                 return "Content"; 
             }
             else if (currentMood < 0)
             {
-                //Disappointment, Resentment
+                //Disappointment
                 return "Disappointment";
+            }
+            else{
+                if (othersMood > 0)
+                {
+                    // Resentment
+                    return "Resentment";
+                }
+                else if (othersMood < 0)
+                {
+                    // Gloating
+                    return "Gloating";
+                }
             }
         }
         else
@@ -187,7 +215,6 @@ public abstract class BotTemplate : ScriptableObject
                 // Distress
                 return "Distress";
             }
-            else return "";
         }
         return "";
     }

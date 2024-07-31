@@ -54,7 +54,7 @@ public class CautiousTrojan : BotTemplate
         GameController gcr = GameController.gameController;
         if (actionsLeft >= gcr.movesCount)
         {
-            IncrementMood((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.5f : 0.5f * selfMoodFactor);
+            IncrementMood(selfMoodFactor * ((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.5f : 0.5f));
         }
     }
     protected override int GetMovementTarget(int specActionTarget)

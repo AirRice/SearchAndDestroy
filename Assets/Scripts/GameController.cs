@@ -263,6 +263,24 @@ public class GameController : MonoBehaviour
             }
         }
     }
+    public float GetOthersAvgMood(int myTeam)
+    {
+        float sum = 0;
+        int toCalc = 0;
+        if (playersCount<=1)
+            return 0;
+        for (int i=0; i<playersCount; i++)
+        {
+            if (myTeam == 0 && i != 0 || myTeam != 0 && i == 0)
+            {
+                Debug.Log($"Player {i} Current Mood: {playerBotControllers[i].GetCurrentMood()}");
+                sum += playerBotControllers[i].GetCurrentMood();
+                toCalc++;
+            }
+            
+        }
+        return sum/toCalc;
+    }
 
     public void IncrementMoodMultiple(int origin, bool allies, bool positive)
     {
