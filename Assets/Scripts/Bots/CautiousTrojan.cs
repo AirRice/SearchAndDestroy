@@ -43,12 +43,23 @@ public class CautiousTrojan : BotTemplate
     {
         // Reset the current infection target after we perform the special action on it
         if (specActionTarget == curInfectTarget)
+        {
             curInfectTarget = -1;
+            IncrementMood(selfMoodFactor);
+            IncrementMoodOthers(false, false);
+        }
+    }
+    protected override void HandleTurn(int playerID, int actionsLeft)
+    {
+        GameController gcr = GameController.gameController;
+        if (actionsLeft >= gcr.movesCount)
+        {
+            IncrementMood((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.5f : 0.5f * selfMoodFactor);
+        }
     }
     protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
-
         //Edge case: Scan target is same space as current node
         //scan is only possible on adjacent spaces
         if(currentLocation == specActionTarget)

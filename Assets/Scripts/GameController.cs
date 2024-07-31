@@ -246,7 +246,6 @@ public class GameController : MonoBehaviour
         playerBotProfiles = new BotProfile[playersCount];
         for (int i=0; i < playersCount; i++)
         {
-            Debug.Log(BotProfiles.Where(v => v.name.Equals(playerBotType[i])).ToArray().Length);
             BotProfile botProfile = BotProfiles.Where(v => v.name.Equals(playerBotType[i])).DefaultIfEmpty(null).First();
             Type botType = Type.GetType(botProfile.bottype);
             //Type botType = Type.GetType(playerBotType[i]);
@@ -734,15 +733,17 @@ public class GameController : MonoBehaviour
 
         personalityParams = personalityParams ?? "";
         
-        string instruction = $"TASK:\nGenerate a chat message from player {player} to the other players at this moment.  Also associate an emotion with player {player} at the moment. Pick one of these emotions: angry, confused, content, fear, gloating, happy, sad, surprised.\n";
+        string instruction = $"TASK:\nGenerate a message from player {player} in an in-game discussion at this moment.  Also associate an emotion with the generated message. Pick one of these emotions: angry, confused, content, fear, gloating, happy, sad, surprised.\n";
 
-        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system, and all other players are Scanners trying to find and purge the virus. The Trojan is trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. The Scanners are trying to deduce the Trojan's location and purge it. The Trojan's location is hidden to the Scanners normally. By scanning, Scanner players learn which adjacent nodes are closest to the trojan. \nGAME STATE:\nThe players are at nodes:\n";
+        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan.";
+        
+        string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
 
         for(int i = 0; i < playersCount; i++)
         {
             if (i == 0 && player == 0 || i != 0)
             {
-                gameDefinition = gameDefinition + $"Player {i}: Node {GetPlayerPosition(i)}\n";
+                gameState = gameState + $"Player {i}: Node {GetPlayerPosition(i)}\n";
             }
         }
 
@@ -754,6 +755,14 @@ public class GameController : MonoBehaviour
         {
             //string personality = string.Join(",", personalityParams);
             playerInfoString = playerInfoString + $"Player {player} has a {personalityParams} personality.";
+        }
+        if(playerBotControllers[currentTurnPlayer] != null)
+        {
+            string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
+            if (emotion.Length > 0)
+            {
+                playerInfoString = playerInfoString + $" Player {player} is feeling {emotion}.";
+            }
         }
 
         string lastActionString = "";
@@ -791,10 +800,11 @@ public class GameController : MonoBehaviour
 
         string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": <PLAYER NUMBER>, \"emotion\": <EMOTION> (SELECTED BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised),\"comment\":<GENERATED COMMENT>}\n ANSWER:\n";
 
-        string inputText = instruction + gameDefinition + playerInfoString + playerActionString + extraInfoString + prevChat + responseFormatting;
+        string inputText = instruction + gameDefinition + playerInfoString + /* playerActionString + extraInfoString + */prevChat + responseFormatting;
         chattedCurrentTurn.Add(player);
         //Debug.Log(inputText);
         HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
+        //GroqAPIHandler.TextGeneration(inputText);
     }
 
     void OnAPIResult(string result)

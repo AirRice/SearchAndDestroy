@@ -96,6 +96,8 @@ public class MiddleSplitScan : BotTemplate
             {
                 int[] possible_truncated = possibleLocsList.Except(nodesInDir).ToArray();
                 IncrementMood((possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count ? 1 : -1) * selfMoodFactor);
+                IncrementMoodOthers(true, possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count);
+                IncrementMoodOthers(false, !(possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count));
                 foreach (int id in possible_truncated)
                 {
                     MiddleSplitScan.possibleLocations[id] = false;

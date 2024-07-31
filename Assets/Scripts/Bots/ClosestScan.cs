@@ -58,6 +58,8 @@ public class ClosestScan : BotTemplate
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(info.Item1,info.Item2);
             List<int> possibleLocsList = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList();
             IncrementMood((possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count ? 1 : -1) * selfMoodFactor);
+            IncrementMoodOthers(true, possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count);
+            IncrementMoodOthers(false, !(possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count));
             
             foreach (int id in possibleLocsList.Except(nodesInDir).ToArray())
             {
