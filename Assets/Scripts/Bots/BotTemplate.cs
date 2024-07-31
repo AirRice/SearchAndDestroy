@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 public abstract class BotTemplate : ScriptableObject
 {
     protected int playerID;
@@ -122,21 +123,40 @@ public abstract class BotTemplate : ScriptableObject
 
     // Horrible if-statement mess that I'll turn into modular files down the line...
     // Simple OCC based emotion simulation.
-    public string MakeBark(int playerID)
+    private readonly Dictionary<string, string> EmotionBarkFilepaths = new(){
+        {"Relief", "Barks/relief"},
+        {"Resignation", "Barks/fearsconfirmed"}, // Resignation is Fears Confirmed in OCC Model.
+        {"Satisfaction", "Barks/satisfaction"},
+        {"Disappointment", "Barks/disappointment"},
+        {"Joy", "Barks/joy"},
+        {"Distress", "Barks/distress"},
+        {"Gloating", "Barks/gloating"},
+        {"Resentment", "Barks/resentment"}
+    };
+    
+    public string GetRandomBark()
     {
-        //string filePathBarks = System.IO.Path.Combine(Application.dataPath, "Barks/", playerID == 0 ? "trojan/" : "scanner/");
+        string filePathBarks = System.IO.Path.Combine(Application.dataPath, (EmotionBarkFilepaths[GetCurrentEmotion()] + (playerID == 0 ? "trojan.txt" : "scanner.txt")));
+        string[] allLines = System.IO.File.ReadAllLines(filePathBarks);
+        int randIndex = Random.Range(0,allLines.Length);
+        return allLines[randIndex];
+    }
+
+    public string GetCurrentEmotion()
+    {
+        Debug.Log($"Player {playerID} current mood: {currentMood} prev mood: {prevMood}");
         if(prevMood < 0)
         {
             //Fear - Expected consequence negative
             if (currentMood > 0)
             {
                 // Relief, Gloating
-                return (playerID == 0 ? "I thought you might get me there! I was getting worried." : "Thought you could get away, huh? We're on your trail again.");
+                return "Relief";
             }
             else if (currentMood < 0)
             {
-                //Fears confirmed, Resentment
-                return (playerID == 0 ? "That's not good." : "Come on, where are you hiding?");
+                //Resignation, Resentment
+                return "Resignation";
             }
 
         }
@@ -146,12 +166,12 @@ public abstract class BotTemplate : ScriptableObject
             if (currentMood > 0)
             {
                 // Satisfaction, Gloating
-                return (playerID == 0 ? "Hahaha, I don't think you're even close to finding where I am." : "Yep, we still got a trail on you.");
+                return "Satisfaction";
             }
             else if (currentMood < 0)
             {
                 //Disappointment, Resentment
-                return (playerID == 0 ? "I'm gonna have to try something else... You're guarding too well." : "Huh? I really thought you were over there.");
+                return "Disappointment";
             }
         }
         else
@@ -159,12 +179,12 @@ public abstract class BotTemplate : ScriptableObject
             if (currentMood > 0)
             {
                 // Joy
-                return (playerID == 0 ? "One step closer to victory again!" : "Aha! There you are.");
+                return "Joy";
             }
             else if (currentMood < 0)
             {
                 // Distress
-                return (playerID == 0 ? "Oh, this is getting tense. I hope you don't find me." : "I'm getting a bit worried. I have no idea where you could be.");
+                return "Distress";
             }
             else return "";
         }
