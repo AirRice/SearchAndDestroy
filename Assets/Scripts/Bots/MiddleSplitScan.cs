@@ -92,12 +92,10 @@ public class MiddleSplitScan : BotTemplate
             }
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(prevScan.Item1, prevScan.Item2);
             List<int> possibleLocsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+            int initialPossibleLocsCount = possibleLocsList.Count;
             if (possibleLocsList.Count > 0)
             {
                 int[] possible_truncated = possibleLocsList.Except(nodesInDir).ToArray();
-                IncrementMood((possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count ? 1 : -1) * selfMoodFactor);
-                IncrementMoodOthers(true, possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count);
-                IncrementMoodOthers(false, !(possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count));
                 foreach (int id in possible_truncated)
                 {
                     MiddleSplitScan.possibleLocations[id] = false;
@@ -113,7 +111,10 @@ public class MiddleSplitScan : BotTemplate
 
             possibleLocsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
             Vector3 offset = new(0,0.55f,0);
-
+            int postPossibleLocsCount = possibleLocsList.Count;
+            IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
+            IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
+            IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
             // Uncomment to see scan knowledge pool information
             
             foreach (int location in possibleLocsList)

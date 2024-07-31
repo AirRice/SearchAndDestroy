@@ -268,8 +268,12 @@ public class GameController : MonoBehaviour
     {
         for (int i=0; i < playersCount; i++)
         {
-            bool sameTeam = (allies && origin != 0 && i != 0);
-            playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (sameTeam ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
+            if (i == origin || origin == 0 && allies)
+                continue;
+            if(origin != 0 && allies && i != 0 || origin != 0 && i == 0 && !allies || origin == 0 && !allies)
+            {
+                playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (allies ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
+            }
         }
     }
 

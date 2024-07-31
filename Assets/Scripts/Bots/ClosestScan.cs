@@ -48,6 +48,8 @@ public class ClosestScan : BotTemplate
         List<(int,int[])> prevScans = new(gcr.scanHistory);
         // recalculate the possible locations
         // prune if they do not meet the requirements
+        List<int> possibleLocsList = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        int initialPossibleLocsCount = possibleLocsList.Count;
         foreach ((int,int[]) info in prevScans)
         {
             if(info.Item2.Length < 1)
@@ -56,10 +58,6 @@ public class ClosestScan : BotTemplate
         
             Debug.Log($"Previous scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",info.Item2)} from starting node {info.Item1}");
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(info.Item1,info.Item2);
-            List<int> possibleLocsList = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList();
-            IncrementMood((possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count ? 1 : -1) * selfMoodFactor);
-            IncrementMoodOthers(true, possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count);
-            IncrementMoodOthers(false, !(possibleLocsList.Intersect(nodesInDir).ToList().Count <= possibleLocsList.Count));
             
             foreach (int id in possibleLocsList.Except(nodesInDir).ToArray())
             {
@@ -68,6 +66,10 @@ public class ClosestScan : BotTemplate
 
             
         }
+        int postPossibleLocsCount = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList().Count;
+        IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
+        IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
+        IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
         Vector3 offset = new(0,0.55f,0);
         foreach (int location in (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList())
         {

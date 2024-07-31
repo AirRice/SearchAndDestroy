@@ -21,6 +21,7 @@ public abstract class BotTemplate : ScriptableObject
     }
     public void IncrementMood(float val)
     {
+        Debug.Log($"Player {playerID}'s mood incremented by {val}");
         currentMood += val;
     }
     public void IncrementMoodOthers(bool allies, bool positive)
