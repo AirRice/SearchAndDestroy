@@ -752,7 +752,7 @@ public class GameController : MonoBehaviour
         actionLog = actionLog ?? "";
         personalityParams = personalityParams ?? "";
         
-        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Assume the messages are directed at other players rather than simply commenting on the game.";
+        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. In this game, one player (Player 0) takes on the role of a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Scanner players also don't want to tell the Trojan about their strategy too much. Assume messages are directed at other players rather than simply commenting on the game. Assume players refrain from discussing node numbers in too much depth.";
         
         string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
 
@@ -795,7 +795,7 @@ public class GameController : MonoBehaviour
 
         string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\n";
 
-        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
+        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <SELECT BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
    
         string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
         chattedCurrentTurn.Add(player);
