@@ -35,7 +35,7 @@ public class GroqAPIHandler
         JObject result = await groqApi.CreateChatCompletionAsync(request);
 
         string response = result["choices"]?[0]?["message"]?["content"]?.ToString();
-        Debug.Log(response);
+
         if (response != null)
         {
             onSuccess(response);

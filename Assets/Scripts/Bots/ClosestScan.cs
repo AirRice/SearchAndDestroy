@@ -45,6 +45,15 @@ public class ClosestScan : BotTemplate
     protected override void OnSpecialAction(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
+        if (gcr.scanHistory.Count == 0)
+            return;
+        (int,int[]) prevScan = gcr.scanHistory[^1];
+        // recalculate the possible locations
+        // prune if they do not meet the requirements
+        if(prevScan.Item2.Length >= 1)
+        {
+            actionLog.Add(new PlayerAction(1, prevScan.Item1, prevScan.Item2));
+        }
         List<(int,int[])> prevScans = new(gcr.scanHistory);
         // recalculate the possible locations
         // prune if they do not meet the requirements

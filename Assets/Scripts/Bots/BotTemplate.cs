@@ -4,12 +4,14 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 public abstract class BotTemplate : ScriptableObject
 {
+    protected bool useHardcodedText = false;
     protected int playerID;
+    protected string personality;
     protected int currentLocation;
     protected abstract int GetMovementTarget(int specActionTarget);
     protected abstract int GetSpecialActionTarget();
     protected bool debugLogging = false;
-
+    protected List<PlayerAction> actionLog = new();
     protected float currentMood = 0;
     protected float prevMood = 0;
     public float selfMoodFactor = 0.3f; // How much self-actions affect mood
@@ -19,9 +21,13 @@ public abstract class BotTemplate : ScriptableObject
     {
         playerID = ID;   
     }
+    public void SetPersonalityParams(string personalityParams)
+    {
+        personality = personalityParams;
+    }
     public void IncrementMood(float val)
     {
-        Debug.Log($"Player {playerID}'s mood incremented by {val}");
+        //Debug.Log($"Player {playerID}'s mood incremented by {val}");
         currentMood += val;
     }
     public void IncrementMoodOthers(bool allies, bool positive)
@@ -32,6 +38,7 @@ public abstract class BotTemplate : ScriptableObject
     public void ProcessTurn(int currentNodeID, int actionsLeft)
     {
         bool isHiddenBot = playerID == 0;
+        actionLog.Clear();
         prevMood = currentMood;
         currentMood = 0;
         if(debugLogging)
@@ -78,6 +85,7 @@ public abstract class BotTemplate : ScriptableObject
             int moveTarget = GetMovementTarget(specActionTarget);
             if(moveTarget != -1)
             {
+                int prevLocation = currentLocation;
                 gcr.TryMoveToNode(moveTarget);
                 currentLocation = moveTarget;
                 if(debugLogging)
@@ -85,9 +93,11 @@ public abstract class BotTemplate : ScriptableObject
                     Debug.Log($"Moving to node id {moveTarget}");
                 }
                 OnMove(moveTarget);
+                actionLog.Add(new PlayerAction(0, prevLocation, new int[] {moveTarget}));
             }
         }
         OnPlayerTurnEnd();
+        gcr.GenerateStatusString(playerID, GetActionLog(), personality);
         if (gcr.autoProgressTurn)
         {
             gcr.ProgressTurn();
@@ -145,6 +155,35 @@ public abstract class BotTemplate : ScriptableObject
     public float GetCurrentMood()
     {
         return currentMood;
+    }
+    public string GetActionLog()
+    {
+        string ActionsString = $"\nThis turn, Player {playerID} has, in order:\n";
+        for (int i = 0; i < actionLog.Count; i++)
+        {
+            string lastActionString = $"{i+1}: ";
+            PlayerAction act = actionLog[i];
+            switch (act.actionType)
+            {
+                case 0:
+                    lastActionString += $"Moved from node {act.nodeFrom} to {act.nodeTargets[0]}\n";
+                    break;
+                case 1:
+                    if (playerID == 0)
+                    {
+                        lastActionString += $"Infected node {act.nodeTargets[0]}\n";
+                    }
+                    else
+                    {
+                        lastActionString += $"Scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", act.nodeTargets)}\n";
+                    }
+                    break;
+                default:
+                    break;
+            }
+            ActionsString += lastActionString;
+        }
+        return ActionsString;
     }
     public string GetCurrentEmotion()
     {
@@ -217,5 +256,19 @@ public abstract class BotTemplate : ScriptableObject
             }
         }
         return "";
+    }
+}
+
+public class PlayerAction
+{
+    public int actionType;
+    public int nodeFrom;
+    public int[] nodeTargets;
+
+    public PlayerAction(int actionType, int nodeFrom, int [] nodeTargets)
+    {
+        this.actionType = actionType;
+        this.nodeFrom = nodeFrom;
+        this.nodeTargets = nodeTargets;
     }
 }

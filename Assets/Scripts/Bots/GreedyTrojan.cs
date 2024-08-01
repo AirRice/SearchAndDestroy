@@ -36,6 +36,7 @@ public class GreedyTrojan : BotTemplate
     }
     protected override void OnSpecialAction(int specActionTarget)
     {
+        actionLog.Add(new PlayerAction(1, currentLocation, new int[] {specActionTarget}));
         // Reset the current infection target after we perform the special action on it
         if (specActionTarget == curInfectTarget)
         {

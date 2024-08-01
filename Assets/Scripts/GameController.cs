@@ -260,6 +260,7 @@ public class GameController : MonoBehaviour
             if (playerBotControllers[i] != null)
             {
                 playerBotControllers[i].SetPlayerID( i );
+                playerBotControllers[i].SetPersonalityParams(botProfile.personality);
             }
         }
     }
@@ -273,7 +274,7 @@ public class GameController : MonoBehaviour
         {
             if (myTeam == 0 && i != 0 || myTeam != 0 && i == 0)
             {
-                Debug.Log($"Player {i} Current Mood: {playerBotControllers[i].GetCurrentMood()}");
+                //Debug.Log($"Player {i} Current Mood: {playerBotControllers[i].GetCurrentMood()}");
                 sum += playerBotControllers[i].GetCurrentMood();
                 toCalc++;
             }
@@ -447,7 +448,6 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|0|{GetActivePlayerPosition()}|{toMoveTo}");
         }
-        GenerateStatusString(currentTurnPlayer, 0, GetActivePlayerPosition(), new[] {toMoveTo}, 0.25f, playerBotProfiles[currentTurnPlayer].personality);
         if(useSmoothMove)
         {
             PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
@@ -515,8 +515,6 @@ public class GameController : MonoBehaviour
         }
         return false;
     }
-    private readonly string[] TrojanPersonality = {"gloating", "arrogant", "playful"};
-    private readonly string[] ScannerPersonality = {"professional", "stoic", "determined"};
     //Infect the specified node. (Trojan Player only)
     public bool TryNodeInfect(Node toInfect)
     {
@@ -528,7 +526,6 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
         }
-        GenerateStatusString(currentTurnPlayer, 1, GetActivePlayerPosition(), new[] {toInfect.nodeID}, 1, playerBotProfiles[currentTurnPlayer].personality);
         if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
         {
             EndGame(true);
@@ -578,7 +575,6 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
         }
-        GenerateStatusString(currentTurnPlayer, 1, GetActivePlayerPosition(), closestNodes.ToArray(), 1, playerBotProfiles[currentTurnPlayer].personality);
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
         Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
@@ -745,20 +741,18 @@ public class GameController : MonoBehaviour
     // Prompt tuned for Mistral 7B
     private readonly string tWinCondition = "The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your \n";
     private readonly string sWinCondition = "The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.\n";
-    public void GenerateStatusString(int player, int actiontype, int nodeFrom, int[] nodeTargets, float sendChatChance = 1.0f, string personalityParams = null)
+    public void GenerateStatusString(int player, string actionLog = null, string personalityParams = null)
     {
         int turn = GetTurnNumber();
         // Only generate this sometimes
-        if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
+        /*if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
         {
             return;
-        }
-
+        }*/
+        actionLog = actionLog ?? "";
         personalityParams = personalityParams ?? "";
         
-        string instruction = $"TASK:\nGenerate a message from player {player} in an in-game discussion at this moment. Also associate one of the given emotions with the generated message. Pick one of these emotions: angry, confused, content, fear, gloating, happy, sad, surprised.\n";
-
-        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan.";
+        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. Player 0 is a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Assume the messages are directed at other players rather than simply commenting on the game.";
         
         string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
 
@@ -773,61 +767,41 @@ public class GameController : MonoBehaviour
         string playerCountString = player == 0 ? "the only player" : $"one of {playersCount-1} players";
         string playerInfoString = $"{(player == 0 ? $"Player {player} is the Trojan, being " : $"Player {player} is one of the Scanners, being")} {playerCountString} on their team.";
 
-        playerInfoString = playerInfoString + " Assume the Trojan wants to stay hidden and will not give away information about their location, and Scanner players will try to work together. Assume the messages are directed at other players rather than simply commenting on the game.";
         if (personalityParams.Length > 0 )
         {
             //string personality = string.Join(",", personalityParams);
-            playerInfoString = playerInfoString + $"Player {player} has a {personalityParams} personality.";
+            playerInfoString = playerInfoString + $" Player {player} has a {personalityParams} personality.";
         }
         if(playerBotControllers[currentTurnPlayer] != null)
         {
             string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
             if (emotion.Length > 0)
             {
-                playerInfoString = playerInfoString + $" Player {player} is feeling {emotion}.";
+                playerInfoString = playerInfoString + $" Player {player} is currently feeling {emotion}.";
             }
         }
 
-        string lastActionString = "";
-        switch (actiontype)
-        {
-            case 0:
-                lastActionString = $"moved from node {nodeFrom} to {nodeTargets[0]}";
-                break;
-            case 1:
-                if (player == 0)
-                {
-                    lastActionString = $"infected node {nodeTargets[0]}";
-                }
-                else
-                {
-                    lastActionString = $"scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", nodeTargets)}";
-                }
-                break;
-            default:
-                break;
-        }
-        string playerActionString = $" Player {player} has just {lastActionString}.";
-
-        string extraInfoString = $" Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} have been infected so far. This is turn number {turn}. ";
+        string extraInfoString = $" Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} have been infected so far. This is turn number {turn}.\n";
 
         string prevChat = "";
         if (chatHistory.Count > 0)
         {
             prevChat = "\n\nPREVIOUS CHAT LOG:\n";
-            foreach(string chat in chatHistory)
+            foreach(string chat in chatHistory.Skip(Math.Max(0, chatHistory.Count() - 5)))
             {
                 prevChat = prevChat + chat + "\n";
             }
         }
 
-        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": <PLAYER NUMBER>, \"emotion\": <EMOTION> (SELECTED BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised),\"message\":<GENERATED MESSAGE>}\n ANSWER:\n";
+        string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\n";
 
-        string inputText = instruction + gameDefinition + playerInfoString + /* playerActionString + extraInfoString + */prevChat + responseFormatting;
+        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
+   
+        string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
         chattedCurrentTurn.Add(player);
-        //Debug.Log(inputText);
-        HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
-        //GroqAPIHandler.TextGeneration(inputText);
+        Debug.Log(inputText);
+        //HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
+        GroqAPIHandler.TextGeneration(inputText, OnAPIResult, OnAPIError);
     }
 
     void OnAPIResult(string result)

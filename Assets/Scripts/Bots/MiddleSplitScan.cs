@@ -86,6 +86,7 @@ public class MiddleSplitScan : BotTemplate
         // prune if they do not meet the requirements
         if(prevScan.Item2.Length >= 1)
         {
+            actionLog.Add(new PlayerAction(1, prevScan.Item1, prevScan.Item2));
             if(debugLogging)
             {
                 Debug.Log($"Last scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",prevScan.Item2)} from starting node {prevScan.Item1}");
