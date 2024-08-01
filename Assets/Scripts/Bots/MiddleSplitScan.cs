@@ -19,11 +19,15 @@ public class MiddleSplitScan : BotTemplate
     public int followDist = 1;
     // How far to go from previous scanners in the case of a diagonal scan ()
     private bool debugLogging = true;
+    public override List<int> GetSuspectedTrojanLocs()
+    {
+        return (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+    }
     protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
         List<(int,int[])> prevScans = gcr.scanHistory;
-        List<int> possibleLocationsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        List<int> possibleLocationsList = GetSuspectedTrojanLocs();
         if (((double)possibleLocationsList.Count/gcr.mapSize * gcr.mapSize <= 0.5 || MiddleSplitScan.algoPlayerInTurn == gcr.playersCount-2) && possibleLocationsList.Count > 0) 
         {
             // If we are the last scanner or there's a small number of possible locations, scan the nearest
@@ -92,7 +96,7 @@ public class MiddleSplitScan : BotTemplate
                 Debug.Log($"Last scan info: Hidden player was in direction(s) of Node(s) {string.Join(" and ",prevScan.Item2)} from starting node {prevScan.Item1}");
             }
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(prevScan.Item1, prevScan.Item2);
-            List<int> possibleLocsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+            List<int> possibleLocsList = GetSuspectedTrojanLocs();
             int initialPossibleLocsCount = possibleLocsList.Count;
             if (possibleLocsList.Count > 0)
             {
@@ -110,7 +114,7 @@ public class MiddleSplitScan : BotTemplate
                 }
             }
 
-            possibleLocsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+            possibleLocsList = GetSuspectedTrojanLocs();
             Vector3 offset = new(0,0.55f,0);
             int postPossibleLocsCount = possibleLocsList.Count;
             IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
@@ -131,7 +135,7 @@ public class MiddleSplitScan : BotTemplate
     protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
-        List<int> possibleLocationsList = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        List<int> possibleLocationsList = GetSuspectedTrojanLocs();
         if (specActionTarget != -1)
         {
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
@@ -199,7 +203,7 @@ public class MiddleSplitScan : BotTemplate
                     MiddleSplitScan.possibleLocations.Add(i, false);
                 }
             }
-            int[] locationsToPropagate = (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
+            int[] locationsToPropagate = GetSuspectedTrojanLocs().ToArray();
             //Grow the search space size if a turn has passed, because the hidden player may have moved.
             foreach(int locID in locationsToPropagate)
             {

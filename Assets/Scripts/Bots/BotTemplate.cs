@@ -35,6 +35,10 @@ public abstract class BotTemplate : ScriptableObject
         GameController gcr = GameController.gameController;
         gcr.IncrementMoodMultiple(playerID, allies, positive);
     }
+    public virtual List<int> GetSuspectedTrojanLocs()
+    {
+        return null;
+    }
     public void ProcessTurn(int currentNodeID, int actionsLeft)
     {
         bool isHiddenBot = playerID == 0;

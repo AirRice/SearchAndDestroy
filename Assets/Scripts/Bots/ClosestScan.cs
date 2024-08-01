@@ -17,18 +17,21 @@ public class ClosestScan : BotTemplate
     **/
     public static Dictionary<int,bool> possibleLocations = new(); //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
     public static int algoPlayerInTurn = 0; // player index only incremented when a player using this algorithm's turn comes around
-
+    public override List<int> GetSuspectedTrojanLocs()
+    {
+        return (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+    }
     protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
         // If no info exists for the turn, do one just for some information
-        if ((from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList().Count <= 0)
+        if (GetSuspectedTrojanLocs().Count <= 0)
         {
             Debug.Log("No info found scanning");
             return currentLocation;
         }
         //Get the closest possible location
-        int[] possibleLocations_arr = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
+        int[] possibleLocations_arr = GetSuspectedTrojanLocs().ToArray();
         if (possibleLocations_arr.Length > 0)
         {
             int closestTarget = possibleLocations_arr.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
@@ -57,7 +60,7 @@ public class ClosestScan : BotTemplate
         List<(int,int[])> prevScans = new(gcr.scanHistory);
         // recalculate the possible locations
         // prune if they do not meet the requirements
-        List<int> possibleLocsList = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        List<int> possibleLocsList = GetSuspectedTrojanLocs();
         int initialPossibleLocsCount = possibleLocsList.Count;
         foreach ((int,int[]) info in prevScans)
         {
@@ -75,12 +78,12 @@ public class ClosestScan : BotTemplate
 
             
         }
-        int postPossibleLocsCount = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList().Count;
+        int postPossibleLocsCount = GetSuspectedTrojanLocs().Count;
         IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
         IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
         IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
         Vector3 offset = new(0,0.55f,0);
-        foreach (int location in (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToList())
+        foreach (int location in GetSuspectedTrojanLocs())
         {
             DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             textPopup.transform.position = Node.GetNode(location).transform.position + offset;
@@ -132,7 +135,7 @@ public class ClosestScan : BotTemplate
                 ClosestScan.possibleLocations[gcr.hiddenSpawn.nodeID] = true;
             }
 
-            int[] locationsToPropagate = (from kvp in ClosestScan.possibleLocations where kvp.Value select kvp.Key).ToArray();
+            int[] locationsToPropagate = GetSuspectedTrojanLocs().ToArray();
             //If a node was infected add the surrounding nodes to the possible locations info
             //This can be up to (max movement limit - distance to last infected node from closest last possible node) distance away
             int lastInfected = gcr.lastInfectedNode;
