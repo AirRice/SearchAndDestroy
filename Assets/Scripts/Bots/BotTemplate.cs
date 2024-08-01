@@ -179,7 +179,14 @@ public abstract class BotTemplate : ScriptableObject
                     }
                     else
                     {
-                        lastActionString += $"Scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", act.nodeTargets)}\n";
+                        if (GetSuspectedTrojanLocs() != null && GetSuspectedTrojanLocs().Count > 0)
+                        {
+                            lastActionString += $"Scanned for the Trojan, and now suspects the Trojan is at one of these nodes:({string.Join(",",GetSuspectedTrojanLocs())})\n";
+                        }
+                        else
+                        {
+                            lastActionString += $"Scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", act.nodeTargets)}\n";
+                        }
                     }
                     break;
                 default:
