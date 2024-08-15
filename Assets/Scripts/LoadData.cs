@@ -32,6 +32,7 @@ public class ConfigData{
     public int maxTurnCount;
     public int maxRoundCount;
     public int maxObjectives;
+    public int localPlayerID;
     public bool hotSeatMode;
     public bool logToCSV;
     public bool autoProcessTurn;
@@ -46,6 +47,7 @@ public class ConfigData{
         maxTurnCount = 15;
         maxRoundCount = 100;
         maxObjectives = 2;
+        localPlayerID = 0;
         hotSeatMode = true;
         logToCSV = false;
         autoProcessTurn = true;
@@ -60,6 +62,7 @@ public class ConfigData{
         int maxTurnCount,
         int maxRoundCount,
         int maxObjectives,
+        int localPlayerID,
         bool hotSeatMode,
         bool logToCSV,
         bool useSmoothMove,
@@ -73,6 +76,7 @@ public class ConfigData{
         this.maxTurnCount = maxTurnCount;
         this.maxRoundCount = maxRoundCount;
         this.maxObjectives = maxObjectives;
+        this.localPlayerID = localPlayerID;
         this.hotSeatMode = hotSeatMode;
         this.logToCSV = logToCSV;
         this.autoProcessTurn = autoProcessTurn;

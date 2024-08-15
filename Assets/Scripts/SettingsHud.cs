@@ -12,6 +12,7 @@ public class SettingsHud : MonoBehaviour
     private SliderInt movesCountSlider;
     private SliderInt maxTurnsSlider;
     private TextField maxRoundsField;
+    private TextField localPlayerIDField;
     private Toggle hotSeatToggle;
     private Toggle logToCSVToggle;
     private Toggle smoothMoveToggle;
@@ -32,7 +33,7 @@ public class SettingsHud : MonoBehaviour
         maxTurnsSlider = root.Q<SliderInt>("maxTurnsSlider");
 
         maxRoundsField = root.Q<TextField>("maxRoundsField");
-
+        localPlayerIDField = root.Q<TextField>("localPlayerIDField");
         hotSeatToggle = root.Q<Toggle>("hotSeatToggle");
         logToCSVToggle = root.Q<Toggle>("logToCSVToggle");   
         smoothMoveToggle = root.Q<Toggle>("smoothMoveToggle");
@@ -60,12 +61,24 @@ public class SettingsHud : MonoBehaviour
         {
             botDropdownList[i].choices = botProfilesList;
         }
+        localPlayerIDField.RegisterCallback<ChangeEvent<string>>(LocalPlayerIDFieldOnChanged);
         maxRoundsField.RegisterCallback<ChangeEvent<string>>(MaxRoundsFieldOnChanged);
         buttonStartGame.RegisterCallback<ClickEvent>(StartGameOnClicked);
         radioButtonGroupSelectRun.RegisterValueChangedCallback(SelectRunOnChanged);
         buttonAddRun.RegisterCallback<ClickEvent>(AddRunOnClicked);
         buttonRemoveRun.RegisterCallback<ClickEvent>(RemoveRunOnClicked);
         playerCountSlider.RegisterValueChangedCallback(PlayerCountOnChanged);
+
+        mapSizeSlider.RegisterValueChangedCallback(OnNormalSliderChanged);
+        maxObjectivesSlider.RegisterValueChangedCallback(OnNormalSliderChanged);
+        movesCountSlider.RegisterValueChangedCallback(OnNormalSliderChanged);
+        maxTurnsSlider.RegisterValueChangedCallback(OnNormalSliderChanged);
+
+        hotSeatToggle.RegisterValueChangedCallback(OnNormalToggleChanged);
+        logToCSVToggle.RegisterValueChangedCallback(OnNormalToggleChanged);
+        smoothMoveToggle.RegisterValueChangedCallback(OnNormalToggleChanged);
+        autoProcessTurnToggle.RegisterValueChangedCallback(OnNormalToggleChanged);
+
     }
     // Start is called before the first frame update
     void Start()
@@ -87,7 +100,29 @@ public class SettingsHud : MonoBehaviour
             
         }
         radioButtonGroupSelectRun.choices = runs;
-        radioButtonGroupSelectRun.value = 0;
+        radioButtonGroupSelectRun.SetValueWithoutNotify(0);
+
+        ConfigData newcfg = new();
+        if(cfgList[0] != null)
+        {
+            newcfg = cfgList[0];
+        }
+        mapSizeSlider.SetValueWithoutNotify(newcfg.mapSize);
+        maxObjectivesSlider.SetValueWithoutNotify(newcfg.maxObjectives);
+        playerCountSlider.SetValueWithoutNotify(newcfg.playersCount);
+        movesCountSlider.SetValueWithoutNotify(newcfg.movesCount);
+        maxTurnsSlider.SetValueWithoutNotify(newcfg.maxTurnCount);
+        maxRoundsField.SetValueWithoutNotify(newcfg.maxRoundCount.ToString());
+        localPlayerIDField.SetValueWithoutNotify(newcfg.localPlayerID.ToString());
+        hotSeatToggle.SetValueWithoutNotify(newcfg.hotSeatMode);
+        logToCSVToggle.SetValueWithoutNotify(newcfg.logToCSV);
+        autoProcessTurnToggle.SetValueWithoutNotify(newcfg.autoProcessTurn);
+        smoothMoveToggle.SetValueWithoutNotify(newcfg.useSmoothMove);
+
+        for(int i = 0; i < newcfg.playerBotType.Length; i++)
+        {
+            botDropdownList[i].SetValueWithoutNotify(newcfg.playerBotType[i]);
+        }
     }
     private void MaxRoundsFieldOnChanged(ChangeEvent<string> evt)
     {
@@ -95,14 +130,19 @@ public class SettingsHud : MonoBehaviour
         {
             maxRoundsField.SetValueWithoutNotify(evt.previousValue);
         }
+        SaveCurrentConfigs();
+    }
+    private void LocalPlayerIDFieldOnChanged(ChangeEvent<string> evt)
+    {
+        if (!int.TryParse(evt.newValue, out _))
+        {
+            localPlayerIDField.SetValueWithoutNotify(evt.previousValue);
+        }
+        SaveCurrentConfigs();
     }
     private void StartGameOnClicked(ClickEvent evt)
     {
-        ConfigDataList newcfglist = new()
-        {
-            configList = cfgList.ToArray()
-        };
-        LoadData.Save(newcfglist);
+        SaveCurrentConfigs();
         SceneManager.LoadScene("MainSimulation", LoadSceneMode.Single);
     }
     private void AddRunOnClicked(ClickEvent evt){
@@ -123,6 +163,18 @@ public class SettingsHud : MonoBehaviour
         cfgList.RemoveAt(cfgList.Count - 1);
         radioButtonGroupSelectRun.value = radioButtonGroupSelectRun.choices.ToArray().Length-1;
     }
+    private void OnNormalSliderChanged(ChangeEvent<int> evt)
+    {
+        if (evt.newValue == evt.previousValue)
+            return;
+        SaveCurrentConfigs();
+    }
+    private void OnNormalToggleChanged(ChangeEvent<bool> evt)
+    {
+        if (evt.newValue == evt.previousValue)
+            return;
+        SaveCurrentConfigs();
+    }
     private void PlayerCountOnChanged(ChangeEvent<int> evt)
     {
         if (evt.newValue == evt.previousValue)
@@ -140,29 +192,41 @@ public class SettingsHud : MonoBehaviour
                 botDropdownList[i].SetValueWithoutNotify("");
             }
         }
+        SaveCurrentConfigs();
+    }
+    private void SaveCurrentConfigs(int id = -1)
+    {
+        if (id == -1)
+            id = radioButtonGroupSelectRun.value;
+        ConfigData cfg = new ConfigData(
+            mapSizeSlider.value, 
+            playerCountSlider.value, 
+            movesCountSlider.value, 
+            maxTurnsSlider.value,
+            int.Parse(maxRoundsField.value),
+            maxObjectivesSlider.value,
+            int.Parse(localPlayerIDField.value),
+            hotSeatToggle.value,
+            logToCSVToggle.value,
+            smoothMoveToggle.value,
+            autoProcessTurnToggle.value,
+            botDropdownList.Select(list=> list.value).ToArray()
+        );
+        if (id != -1 && id < cfgList.Count)
+        {
+            cfgList[id] = cfg;
+        }
+        ConfigDataList newcfglist = new()
+        {
+            configList = cfgList.ToArray()
+        };
+        LoadData.Save(newcfglist);
     }
     private void SelectRunOnChanged(ChangeEvent<int> evt)
     {
         if (evt.newValue != evt.previousValue)
         {
-            ConfigData cfg = new ConfigData(
-                mapSizeSlider.value, 
-                playerCountSlider.value, 
-                movesCountSlider.value, 
-                maxTurnsSlider.value,
-                int.Parse(maxRoundsField.value),
-                maxObjectivesSlider.value,
-                hotSeatToggle.value,
-                logToCSVToggle.value,
-                smoothMoveToggle.value,
-                autoProcessTurnToggle.value,
-                botDropdownList.Select(list=> list.value).ToArray()
-            );
-            if (evt.previousValue != -1 && evt.previousValue < cfgList.Count)
-            {
-                cfgList[evt.previousValue] = cfg;
-            }
-
+            SaveCurrentConfigs(evt.previousValue);
             ConfigData newcfg = new();
             if(cfgList[evt.newValue] != null)
             {
@@ -174,6 +238,7 @@ public class SettingsHud : MonoBehaviour
             movesCountSlider.SetValueWithoutNotify(newcfg.movesCount);
             maxTurnsSlider.SetValueWithoutNotify(newcfg.maxTurnCount);
             maxRoundsField.SetValueWithoutNotify(newcfg.maxRoundCount.ToString());
+            localPlayerIDField.SetValueWithoutNotify(newcfg.localPlayerID.ToString());
             hotSeatToggle.SetValueWithoutNotify(newcfg.hotSeatMode);
             logToCSVToggle.SetValueWithoutNotify(newcfg.logToCSV);
             autoProcessTurnToggle.SetValueWithoutNotify(newcfg.autoProcessTurn);
@@ -183,11 +248,7 @@ public class SettingsHud : MonoBehaviour
             {
                 botDropdownList[i].SetValueWithoutNotify(newcfg.playerBotType[i]);
             }
-            ConfigDataList newcfglist = new()
-            {
-                configList = cfgList.ToArray()
-            };
-            LoadData.Save(newcfglist);
+            SaveCurrentConfigs();
         }
     }
 }

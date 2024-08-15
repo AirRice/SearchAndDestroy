@@ -39,7 +39,7 @@ public abstract class BotTemplate : ScriptableObject
     {
         return null;
     }
-    public void ProcessTurn(int currentNodeID, int actionsLeft)
+    public IEnumerator ProcessTurn(int currentNodeID, int actionsLeft)
     {
         bool isHiddenBot = playerID == 0;
         actionLog.Clear();
@@ -52,7 +52,7 @@ public abstract class BotTemplate : ScriptableObject
         if((isHiddenBot && playerID != 0) || (!isHiddenBot && playerID == 0))
         {
             Debug.Log($"Warning: Player {playerID} is not a valid target for {GetType().Name}.");
-            return;
+            yield return null;
         }
         currentLocation = currentNodeID;
         HandleTurn(playerID, actionsLeft);
@@ -72,6 +72,7 @@ public abstract class BotTemplate : ScriptableObject
                     break;
                 }
                 OnSpecialAction(specActionTarget);
+                yield return new WaitForSeconds(0.5f);
                 continue;
             }
             else if (!isHiddenBot && currentLocation == specActionTarget)
@@ -84,6 +85,7 @@ public abstract class BotTemplate : ScriptableObject
                     break;
                 }
                 OnSpecialAction(specActionTarget);
+                yield return new WaitForSeconds(0.5f);
                 continue;
             }
             int moveTarget = GetMovementTarget(specActionTarget);
@@ -98,6 +100,8 @@ public abstract class BotTemplate : ScriptableObject
                 }
                 OnMove(moveTarget);
                 actionLog.Add(new PlayerAction(0, prevLocation, new int[] {moveTarget}));
+                if ((playerID == 0 && gcr.localPlayerID == 0) || (playerID != 0))
+                    yield return new WaitForSeconds(0.5f);
             }
         }
         OnPlayerTurnEnd();

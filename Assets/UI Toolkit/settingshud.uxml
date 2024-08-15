@@ -7,6 +7,7 @@
             <ui:SliderInt picking-mode="Ignore" label="Player Count" value="3" high-value="5" low-value="2" show-input-field="true" name="playerCountSlider" style="font-size: 16px;" />
             <ui:SliderInt picking-mode="Ignore" label="Max Actions Per Turn" value="3" high-value="10" name="movesCountSlider" show-input-field="true" low-value="3" />
             <ui:SliderInt picking-mode="Ignore" label="Max Turns Per Round" value="30" high-value="100" name="maxTurnsSlider" show-input-field="true" />
+            <ui:TextField picking-mode="Ignore" label="Local Player ID" value="0" text="0" name="localPlayerIDField" style="font-size: 14px;" />
             <ui:TextField picking-mode="Ignore" label="Max Rounds to Simulate" value="1000" text="1000" name="maxRoundsField" style="font-size: 14px;" />
             <ui:Toggle label="Hot Seat Mode" name="hotSeatToggle" value="true" style="font-size: 16px;" />
             <ui:Toggle label="Log to CSV" name="logToCSVToggle" value="true" style="font-size: 16px;" />
@@ -29,5 +30,5 @@
             </ui:ScrollView>
         </ui:VisualElement>
     </ui:VisualElement>
-    <ui:Button text="Simulate" display-tooltip-when-elided="true" name="buttonStartGame" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(43, 43, 43); color: rgb(255, 255, 255);" />
+    <ui:Button text="Simulate" display-tooltip-when-elided="true" name="buttonStartGame" label="Local Player ID" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(43, 43, 43); color: rgb(255, 255, 255);" />
 </ui:UXML>

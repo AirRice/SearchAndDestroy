@@ -8,6 +8,7 @@ public class GameHud : MonoBehaviour
     private int lastActivePlayer = -1;
     private int lastPlayerTurns = -1;
     private Label labelCurPlayer;
+    private Label labelObjs;
     private List<Label> labelsMoveIndicator = new List<Label>();
     private Label labelBottomText;
     private Label labelCentreText;
@@ -27,6 +28,7 @@ public class GameHud : MonoBehaviour
         VisualElement overlay = root.Q<VisualElement>("Overlay");
         
         labelCurPlayer = root.Q<Label>("LabelCurPlayer");
+        labelObjs = root.Q<Label>("LabelObjs");
         labelTurnCounter = root.Q<Label>("LabelTurnCounter");
         buttonEndTurn = root.Q<Button>("ButtonEndTurn");
         buttonPlayerAction = root.Q<Button>("ButtonPlayerAction");
@@ -129,6 +131,10 @@ public class GameHud : MonoBehaviour
                 buttonPlayerAction.style.backgroundColor = (gameCurrentTurnMovesLeft < 1) ? Color.gray : Color.white;
             }       
         }
+    }
+    public void UpdateObjectivesData(int total, int taken)
+    {
+        labelObjs.text = $"Objectives Infected by Trojan: {taken}/{total}";
     }
     public void ShowMoveSpend(int tospend)
     {

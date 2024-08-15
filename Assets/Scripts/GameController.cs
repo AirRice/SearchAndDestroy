@@ -37,6 +37,7 @@ public class GameController : MonoBehaviour
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
     public int lastInfectedNode;
+    public bool shouldUpdateScannerKnowledge = false;
     public List<int> infectedNodeIDs;
     // the Target node(s) to which the hiding player must go and infect.
     public List<int> targetNodeIDs;
@@ -85,6 +86,7 @@ public class GameController : MonoBehaviour
         maxTurnCount = cfg.maxTurnCount;
         maxRoundCount = cfg.maxRoundCount;
         maxObjectives = cfg.maxObjectives;
+        localPlayerID = cfg.localPlayerID;
         hotSeatMode = cfg.hotSeatMode;
         logToCSV = cfg.logToCSV;
         useSmoothMove = cfg.useSmoothMove;
@@ -228,9 +230,9 @@ public class GameController : MonoBehaviour
     // BOT PROFILES
     public static readonly List<BotProfile> BotProfiles = new()
     {
-        new BotProfile("CautiousClosestScanner", "ClosestScan", "Cautious, Professional"),
-        new BotProfile("HotHeadedClosestScanner", "ClosestScan", "Hotheaded, Tense, Jumpy"),
-        new BotProfile("FriendlyClosestScanner", "ClosestScan", "Friendly, Jovial"),
+        new BotProfile("CautiousClosestScanner", "UnifiedScan", "Cautious, Professional"),
+        new BotProfile("HotHeadedClosestScanner", "UnifiedScan", "Hotheaded, Tense, Jumpy"),
+        new BotProfile("FriendlyClosestScanner", "UnifiedScan", "Friendly, Jovial"),
         new BotProfile("CautiousMiddleSplitScanner", "MiddleSplitScan", "Cautious, Professional"),
         new BotProfile("HotHeadedMiddleSplitScanner", "MiddleSplitScan", "Hotheaded, Tense, Jumpy"),
         new BotProfile("FriendlyMiddleSplitScanner", "MiddleSplitScan", "Friendly, Jovial"),
@@ -247,20 +249,23 @@ public class GameController : MonoBehaviour
         for (int i=0; i < playersCount; i++)
         {
             BotProfile botProfile = BotProfiles.Where(v => v.name.Equals(playerBotType[i])).DefaultIfEmpty(null).First();
-            Type botType = Type.GetType(botProfile.bottype);
-            //Type botType = Type.GetType(playerBotType[i]);
-            //Debug.Log(playerBotType[i]);
-            //Debug.Log($"Is defined: {botType != null}");
-            if (botType != null)
+            if (botProfile != null)
             {
-                noBotPlayers = false;
-            }
-            playerBotProfiles[i] = botProfile;
-            playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
-            if (playerBotControllers[i] != null)
-            {
-                playerBotControllers[i].SetPlayerID( i );
-                playerBotControllers[i].SetPersonalityParams(botProfile.personality);
+                Type botType = Type.GetType(botProfile.bottype);
+                //Type botType = Type.GetType(playerBotType[i]);
+                //Debug.Log(playerBotType[i]);
+                //Debug.Log($"Is defined: {botType != null}");
+                if (botType != null)
+                {
+                    noBotPlayers = false;
+                }
+                playerBotProfiles[i] = botProfile;
+                playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
+                if (playerBotControllers[i] != null)
+                {
+                    playerBotControllers[i].SetPlayerID( i );
+                    playerBotControllers[i].SetPersonalityParams(botProfile.personality);
+                }
             }
         }
     }
@@ -275,8 +280,11 @@ public class GameController : MonoBehaviour
             if (myTeam == 0 && i != 0 || myTeam != 0 && i == 0)
             {
                 //Debug.Log($"Player {i} Current Mood: {playerBotControllers[i].GetCurrentMood()}");
-                sum += playerBotControllers[i].GetCurrentMood();
-                toCalc++;
+                if (playerBotControllers[i] != null)
+                {
+                    sum += playerBotControllers[i].GetCurrentMood();
+                    toCalc++;
+                }
             }
             
         }
@@ -291,7 +299,10 @@ public class GameController : MonoBehaviour
                 continue;
             if(origin != 0 && allies && i != 0 || origin != 0 && i == 0 && !allies || origin == 0 && !allies)
             {
-                playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (allies ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
+                if (playerBotControllers[i] != null)
+                {
+                    playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (allies ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
+                }
             }
         }
     }
@@ -369,6 +380,7 @@ public class GameController : MonoBehaviour
             int oppositeChosenTarget = mapSize*mapSize-(randomChosenTarget-1);
             AddTargetNodeID(oppositeChosenTarget);
         }
+        gameHud.UpdateObjectivesData(maxObjectives*2, 0);
         mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
     }
 
@@ -451,7 +463,8 @@ public class GameController : MonoBehaviour
         if(useSmoothMove)
         {
             PlayerPiece toMovePlayerPiece = GetCurrentPlayerPiece();
-            toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
+            if (toMovePlayerPiece != null)
+                toMovePlayerPiece.TrySmoothMove(toMoveTo,movePath);
         }
         UpdateActivePlayerPosition(toMoveTo);
         return toMoveTo;
@@ -526,10 +539,19 @@ public class GameController : MonoBehaviour
         {
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{toInfect.nodeID}");
         }
-        if (targetNodeIDs.Contains(toInfect.nodeID) && targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
+
+        if (targetNodeIDs.Contains(toInfect.nodeID)) 
         {
-            EndGame(true);
-            return true;
+            gameHud.UpdateObjectivesData(maxObjectives, infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length);
+            if (localPlayerID != 0)
+            {
+                mainCam.transform.position = toInfect.transform.position + new Vector3(0,16.5f,0);
+            }
+            if(targetNodeIDs.All(node=> infectedNodeIDs.Contains(node)))
+            {
+                EndGame(true);
+                return true;
+            }
         }
         return false;
     }
@@ -667,9 +689,18 @@ public class GameController : MonoBehaviour
             turnCount++;
             currentTurnPlayer++;
             currentTurnPlayer %= this.playersCount;
+            mainCam.GetComponent<CameraMover>().ClearFollowTarget();
             if(this.hotSeatMode)
             {
                 localPlayerID = currentTurnPlayer;
+            }
+            if (currentTurnPlayer == localPlayerID)
+            {
+                mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
+            }
+            else
+            {
+                mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
             }
             if(GetTurnNumber()>maxTurnCount)
             {
@@ -679,7 +710,7 @@ public class GameController : MonoBehaviour
         gameHud.ResetPlayerActionButton();
         currentPlayerMoves = movesCount;
         currentPlayerDidSpecialAction = false;
-        
+
         // If flag is marked then re-cache the paths, they'll be inaccurate now.
         if(nodeWasInfectedLastTurn)
         {
@@ -694,6 +725,7 @@ public class GameController : MonoBehaviour
             ClosestScan.algoPlayerInTurn = 0;
             MiddleSplitScan.algoPlayerInTurn = 0;
             MiddleSplitScan.algoPlayerLocs = new();
+            shouldUpdateScannerKnowledge = true;
             chattedCurrentTurn.Clear();
             this.StartHiddenTurn();
         }
@@ -706,7 +738,7 @@ public class GameController : MonoBehaviour
         {
             //Handle automatic turn
             int currentPlayerNode = GetActivePlayerPosition();
-            playerBotControllers[currentTurnPlayer].ProcessTurn(currentPlayerNode, currentPlayerMoves);
+            StartCoroutine(playerBotControllers[currentTurnPlayer].ProcessTurn(currentPlayerNode, currentPlayerMoves));
         }
     }
 
@@ -724,7 +756,7 @@ public class GameController : MonoBehaviour
                 infectedNodeIDs.Remove(nodePair.Value.nodeID);
             }
         }
-        if(this.localPlayerID==0)
+        if(localPlayerID == 0)
         {
             //Debug.Log("Making new hidden player piece");
             PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -870,6 +902,8 @@ public class GameController : MonoBehaviour
         {
             TrySpecialAction(thisNode);
         }
+        
+        //mainCam.transform.position = thisNode.transform.position + new Vector3(0,16.5f,0);
     }
     public int GetTurnNumber()
     {

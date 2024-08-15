@@ -68,7 +68,7 @@ public class Node : MonoBehaviour
     {
         LineRenderer line = gameObject.GetComponent<LineRenderer>();
         isTarget = b;
-        line.enabled = (GameController.gameController.localPlayerID == 0);
+        line.enabled = true;
     }
     private bool lastMouseOverState = false;
     void OnMouseOver()

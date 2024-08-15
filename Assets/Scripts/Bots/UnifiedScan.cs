@@ -3,31 +3,49 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using static System.Math;
-public class MiddleSplitScan : BotTemplate
+public class UnifiedScan : BotTemplate
 {
-    /**
-    1. If we have up-to-date info on the trojan player's location from revealed information (newly infected node) this turn assume the trojan is within 3 nodes of the infected location.
-    2. Out of the spaces within 2 nodes, find the space that gives the most information when splitting the currently assumed locations of the trojan.
-     - If similar information can be found, pick one randomly.
-    3. Intersect the existing possible tojan locations with the nodes pointed at by the new scan.
-    4. If the last scanner, move towards and scan (if possible) the closest node out of the possible locations.
-     - Otherwise, repeat steps 2 and 3, disregarding nodes that are on a diagonal from any previous scanner. 
-    **/
-    public static Dictionary<int,bool> possibleLocations = new(); //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
-    public static int algoPlayerInTurn = 0; // player index only incremented when a player using this algorithm's turn comes around
-    public static List<int> algoPlayerLocs = new();
-    // How far to go from previous scanners in the case of a diagonal scan ()
+    //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
+    public static Dictionary<int,bool> possibleLocations = new();
+    public double doClosestNodeRatio = 0.5;
+    public double doClosestRandomThreshold = 0.8;
     private bool debugLogging = true;
     public override List<int> GetSuspectedTrojanLocs()
     {
-        return (from kvp in MiddleSplitScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+        return (from kvp in UnifiedScan.possibleLocations where kvp.Value select kvp.Key).ToList();
+    }
+    protected bool ShouldScanClosest()
+    {
+        GameController gcr = GameController.gameController;
+        List<int> possibleLocationsList = GetSuspectedTrojanLocs();
+        if (playerID == gcr.playersCount - 1)
+        {
+            //last scanner should ALWAYS scan closest
+            return true;
+        }
+        //if number of possible locations is low scan closest
+        else if (((double)possibleLocationsList.Count/(gcr.mapSize * gcr.mapSize) <= doClosestNodeRatio) && possibleLocationsList.Count > 0) 
+        {  
+            return true;
+        }
+        else if (Random.value >= doClosestRandomThreshold)
+        {
+            return true;
+        }
+        return false;
     }
     protected override int GetSpecialActionTarget()
     {
         GameController gcr = GameController.gameController;
         List<(int,int[])> prevScans = gcr.scanHistory;
         List<int> possibleLocationsList = GetSuspectedTrojanLocs();
-        if (((double)possibleLocationsList.Count/gcr.mapSize * gcr.mapSize <= 0.5 || MiddleSplitScan.algoPlayerInTurn == gcr.playersCount-2) && possibleLocationsList.Count > 0) 
+        // If no info exists for the turn, scan in place just for some information
+        if (GetSuspectedTrojanLocs().Count <= 0)
+        {
+            Debug.Log("No info found - scanning in place");
+            return currentLocation;
+        }
+        else if (ShouldScanClosest())
         {
             // If we are the last scanner or there's a small number of possible locations, scan the nearest
             int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
@@ -39,7 +57,6 @@ public class MiddleSplitScan : BotTemplate
         }
         else
         {
-            // Step 2
             // Out of the spaces within 2 nodes, find the space that gives the most information when splitting the currently assumed locations of the trojan.
             // (We calculate this with the standard deviation of the amounts of nodes per scan direction)
             // - If similar information can be found, pick one randomly.
@@ -48,9 +65,10 @@ public class MiddleSplitScan : BotTemplate
             int minNode = -1;
             foreach(int nodeID in gcr.GetAdjacentNodes(currentLocation, gcr.currentPlayerMoves - 1))
             {
-                foreach(int allyPos in algoPlayerLocs)
+                int[] hunterPositions = gcr.GetHunterPos();
+                foreach(int allyPos in hunterPositions)
                 {
-                    if (gcr.GetIsNodeDiagonalFromSource(allyPos, nodeID))
+                    if (allyPos != currentLocation && gcr.GetIsNodeDiagonalFromSource(allyPos, nodeID))
                     {
                         continue;
                     }
@@ -102,14 +120,14 @@ public class MiddleSplitScan : BotTemplate
                 int[] possible_truncated = possibleLocsList.Except(nodesInDir).ToArray();
                 foreach (int id in possible_truncated)
                 {
-                    MiddleSplitScan.possibleLocations[id] = false;
+                    UnifiedScan.possibleLocations[id] = false;
                 }
             }
             else
             {
                 foreach (int id in nodesInDir)
                 {
-                    MiddleSplitScan.possibleLocations[id] = true;
+                    UnifiedScan.possibleLocations[id] = true;
                 }
             }
 
@@ -133,7 +151,6 @@ public class MiddleSplitScan : BotTemplate
     protected override int GetMovementTarget(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
-        List<int> possibleLocationsList = GetSuspectedTrojanLocs();
         if (specActionTarget != -1)
         {
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
@@ -156,25 +173,21 @@ public class MiddleSplitScan : BotTemplate
             return toMoveTo;
         }
     }
-    protected override void OnMove(int moveTarget)
-    {
-        MiddleSplitScan.algoPlayerLocs[MiddleSplitScan.algoPlayerInTurn] = moveTarget;
-    }
     protected override void HandleTurn(int playerID, int actionsLeft)
     {
         GameController gcr = GameController.gameController;
         int mapSizeSq = GameController.gameController.mapSize * GameController.gameController.mapSize;
-        MiddleSplitScan.algoPlayerLocs.Add(currentLocation);
         //Initial setup: only do this when directly following hidden turn
-        if (MiddleSplitScan.algoPlayerInTurn == 0){
+        if (gcr.shouldUpdateScannerKnowledge){
+            gcr.shouldUpdateScannerKnowledge = false;
             // Reset this dict when a new round starts
-            if (gcr.turnCount == 1 || MiddleSplitScan.possibleLocations.Count == 0)
+            if (gcr.turnCount == 1 || UnifiedScan.possibleLocations.Count == 0)
             {
-                MiddleSplitScan.possibleLocations.Clear();
+                UnifiedScan.possibleLocations.Clear();
                 // Add the hidden player's spawn if it's the first time (first turn expected)
                 for ( int i = 1; i <= mapSizeSq; i++ )
                 {
-                    MiddleSplitScan.possibleLocations.Add(i, (i == gcr.hiddenSpawn.nodeID));
+                    UnifiedScan.possibleLocations.Add(i, (i == gcr.hiddenSpawn.nodeID));
                 }
             }
 
@@ -184,7 +197,7 @@ public class MiddleSplitScan : BotTemplate
             {
                 foreach(int nodeID in gcr.GetAdjacentNodes(lastInfected,3))
                 {
-                    MiddleSplitScan.possibleLocations[nodeID] = true;
+                    UnifiedScan.possibleLocations[nodeID] = true;
                 }
             }
 
@@ -194,13 +207,9 @@ public class MiddleSplitScan : BotTemplate
             {
                 foreach(int nodeID in gcr.GetAdjacentNodes(locID, 3))
                 {
-                    MiddleSplitScan.possibleLocations[nodeID] = true;
+                    UnifiedScan.possibleLocations[nodeID] = true;
                 }
             }
         }
-    }
-    protected override void OnPlayerTurnEnd()
-    {
-        MiddleSplitScan.algoPlayerInTurn++;
     }
 }

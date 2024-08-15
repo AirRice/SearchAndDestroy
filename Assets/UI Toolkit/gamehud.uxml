@@ -6,8 +6,8 @@
             <ui:Button text="Restart Game" display-tooltip-when-elided="true" name="ButtonRestartGame" style="font-size: 24px; background-color: rgb(55, 55, 55); opacity: 1; display: flex; visibility: hidden; position: absolute; bottom: 10%; overflow: visible;" />
             <ui:Label display-tooltip-when-elided="true" name="LabelBottomText" style="position: relative; left: auto; align-items: center; justify-content: center; top: auto; height: 15px; padding-left: 0; padding-right: 0; margin-bottom: 32px; font-size: 24px;" />
         </ui:VisualElement>
-        <ui:Label text="Turn:" display-tooltip-when-elided="true" name="LabelTurnCounter" style="font-size: 20px; -unity-text-align: lower-left; align-items: flex-start; height: 30px; width: 25%; right: 0; position: absolute; flex-direction: row;" />
-        <ui:Label text="Current Player:" display-tooltip-when-elided="true" name="LabelCurPlayer" style="font-size: 20px; -unity-text-align: lower-left; align-items: flex-start; height: 30px; width: 25%;" />
+        <ui:Label text="Turn:" display-tooltip-when-elided="true" name="LabelTurnCounter" style="font-size: 20px; -unity-text-align: lower-left; align-items: flex-start; height: 30px; width: 25%; right: auto; position: relative; flex-direction: row;" />
+        <ui:Label text="Current Player:" display-tooltip-when-elided="true" name="LabelCurPlayer" style="font-size: 20px; -unity-text-align: lower-left; align-items: center; height: 30px; width: 25%; right: 0; position: absolute;" />
         <ui:Button text="End Turn" display-tooltip-when-elided="true" name="ButtonEndTurn" style="width: 18%; height: 40px; font-size: 20px; min-width: 256px;" />
         <ui:Label display-tooltip-when-elided="true" name="LabelMove1Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket1.png?fileID=2800000&amp;guid=3456ed60c01246a41bf614da73828c9a&amp;type=3#ticket1&apos;); left: 0; background-color: rgb(0, 0, 0);" />
         <ui:Label display-tooltip-when-elided="true" name="LabelMove2Image" style="width: 128px; height: 32px; background-image: url(&apos;project://database/Assets/Imgsrc/ticket2.png?fileID=2800000&amp;guid=e57ce08ab7fd077418230288383e2bd0&amp;type=3#ticket2&apos;); left: 0;" />
@@ -15,7 +15,8 @@
         <ui:Button text="Button" display-tooltip-when-elided="true" name="ButtonPlayerAction" enable-rich-text="true" style="width: 128px; height: 32px; font-size: 16px; background-color: rgb(255, 255, 255); color: rgb(0, 0, 0); -unity-font-style: bold; margin-left: 0; margin-right: 0;" />
         <ui:VisualElement name="BottomChat" style="width: 512px; justify-content: flex-start; align-items: center; position: absolute; right: 0; bottom: 0; flex-direction: row; height: 128px;">
             <ui:VisualElement name="BottomChatAvatar" style="width: 128px; height: 128px;" />
-            <ui:Label display-tooltip-when-elided="true" name="LabelPlayerDialogue" style="right: auto; bottom: auto; background-color: rgb(0, 0, 0); align-items: stretch; justify-content: flex-end; position: relative; height: 128px; width: 384px; min-width: 192px; min-height: auto; white-space: normal; font-size: 14px; color: rgba(255, 255, 255, 255);" />
+            <ui:Label display-tooltip-when-elided="true" name="LabelPlayerDialogue" style="right: auto; bottom: auto; background-color: rgb(0, 0, 0); align-items: stretch; justify-content: flex-end; position: relative; height: 128px; width: 384px; min-width: 192px; min-height: auto; white-space: normal; font-size: 14px; color: rgb(255, 255, 255);" />
         </ui:VisualElement>
+        <ui:Label text="Objectives:" display-tooltip-when-elided="true" name="LabelObjs" style="font-size: 20px; -unity-text-align: lower-left; align-items: center; height: 30px; width: 25%; right: 0; position: absolute; top: 48px;" />
     </ui:VisualElement>
 </ui:UXML>
