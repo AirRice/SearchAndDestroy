@@ -97,6 +97,10 @@ public class UnifiedScan : BotTemplate
         }
     }
 
+    public void ExternalSpecialAction(int specActionTarget)
+    {
+        OnSpecialAction(specActionTarget);
+    }
     protected override void OnSpecialAction(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
@@ -137,14 +141,14 @@ public class UnifiedScan : BotTemplate
             IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
             IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
             IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
-            
+            /*
             foreach (int location in possibleLocsList)
             {
                 DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
                 textPopup.transform.position = Node.GetNode(location).transform.position + offset;
                 textPopup.SetText(location.ToString(), gcr.mainCam);
                 textPopup.SetColor(Color.red);
-            }
+            }*/
         }
     }
 
