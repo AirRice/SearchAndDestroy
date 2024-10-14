@@ -230,15 +230,11 @@ public class GameController : MonoBehaviour
     // BOT PROFILES
     public static readonly List<BotProfile> BotProfiles = new()
     {
-        new BotProfile("CautiousClosestScanner", "UnifiedScan", "Cautious, Professional"),
-        new BotProfile("HotHeadedClosestScanner", "UnifiedScan", "Hotheaded, Tense, Jumpy"),
-        new BotProfile("FriendlyClosestScanner", "UnifiedScan", "Friendly, Jovial"),
-        new BotProfile("CautiousMiddleSplitScanner", "MiddleSplitScan", "Cautious, Professional"),
-        new BotProfile("HotHeadedMiddleSplitScanner", "MiddleSplitScan", "Hotheaded, Tense, Jumpy"),
-        new BotProfile("FriendlyMiddleSplitScanner", "MiddleSplitScan", "Friendly, Jovial"),
-        new BotProfile("CockyGreedyTrojan", "GreedyTrojan", "Cocky, Witty"),
-        new BotProfile("HeatedGreedyTrojan", "GreedyTrojan", "Heated, Hotheaded"),
-        new BotProfile("CautiousTrojan", "CautiousTrojan", "Cautious, Cowardly, Nervous")
+        new BotProfile("Human", -1, -1f, GenerationType.ContextOnly, ""),
+        new BotProfile("ClosestScanner", 1, 0f, GenerationType.ContextOnly, "Greedy, Shortsighted"),
+        new BotProfile("MiddleSplitScanner", 1, 1f, GenerationType.ContextOnly, "Cautious"),
+        new BotProfile("GreedyTrojan", 0, 0f, GenerationType.ContextOnly, "Greedy, Cocky"),
+        new BotProfile("CautiousTrojan", 0, 1f, GenerationType.ContextOnly, "Cautious, Calculated")
     };
 
     // Sets up the AI agents depending on the file-specified bot templates.
@@ -251,20 +247,19 @@ public class GameController : MonoBehaviour
             BotProfile botProfile = BotProfiles.Where(v => v.name.Equals(playerBotType[i])).DefaultIfEmpty(null).First();
             if (botProfile != null)
             {
-                Type botType = Type.GetType(botProfile.bottype);
-                //Type botType = Type.GetType(playerBotType[i]);
-                //Debug.Log(playerBotType[i]);
-                //Debug.Log($"Is defined: {botType != null}");
-                if (botType != null)
-                {
-                    noBotPlayers = false;
-                }
+                noBotPlayers = false;
                 playerBotProfiles[i] = botProfile;
-                playerBotControllers[i] = botType != null ? (BotTemplate) ScriptableObject.CreateInstance(botType) : null;
-                if (playerBotControllers[i] != null)
+                if (botProfile.name != "Human")
                 {
+                    playerBotControllers[i] = (BotTemplate) ScriptableObject.CreateInstance(botProfile.teamID == 0 ? "UnifiedTrojan" : "UnifiedScan");
                     playerBotControllers[i].SetPlayerID( i );
                     playerBotControllers[i].SetPersonalityParams(botProfile.personality);
+                    playerBotControllers[i].SetCautiousFactor(botProfile.cautiousFactor);
+                    playerBotControllers[i].SetGenerationType(botProfile.generationType);
+                }
+                else
+                {
+                    playerBotControllers[i] = null;
                 }
             }
         }
@@ -776,64 +771,78 @@ public class GameController : MonoBehaviour
     public void GenerateStatusString(int player, string actionLog = null, string personalityParams = null)
     {
         int turn = GetTurnNumber();
-        // Only generate this sometimes
-        /*if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
-        {
-            return;
-        }*/
-        actionLog = actionLog ?? "";
-        personalityParams = personalityParams ?? "";
-        
-        string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. In this game, one player (Player 0) takes on the role of a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Scanner players also don't want to tell the Trojan about their strategy too much. Assume messages are directed at other players rather than simply commenting on the game. Assume players refrain from discussing node numbers in too much depth.";
-        
-        string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
-
-        for(int i = 0; i < playersCount; i++)
-        {
-            if (i == 0 && player == 0 || i != 0)
-            {
-                gameState = gameState + $"Player {i}: Node {GetPlayerPosition(i)}\n";
-            }
-        }
-
-        string playerCountString = player == 0 ? "the only player" : $"one of {playersCount-1} players";
-        string playerInfoString = $"{(player == 0 ? $"Player {player} is the Trojan, being " : $"Player {player} is one of the Scanners, being")} {playerCountString} on their team.";
-
-        if (personalityParams.Length > 0 )
-        {
-            //string personality = string.Join(",", personalityParams);
-            playerInfoString = playerInfoString + $" Player {player} has a {personalityParams} personality.";
-        }
-        if(playerBotControllers[currentTurnPlayer] != null)
+        GenerationType genType = playerBotControllers[currentTurnPlayer].GetGenerationType();
+        bool genContextOnly = genType == GenerationType.ContextOnly;
+        if(genType == GenerationType.EmotionOnly)
         {
             string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
-            if (emotion.Length > 0)
-            {
-                playerInfoString = playerInfoString + $" Player {player} is currently feeling {emotion}.";
-            }
+            string message = playerBotControllers[currentTurnPlayer].GetRandomBark();
+            string responseFormatted = ChatFormat(message);
+            chatHistory.Add($"Player {player}: " + responseFormatted);
+            gameHud.PlayerDialogue(currentTurnPlayer, emotion, responseFormatted);
+
         }
-
-        string extraInfoString = $" Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} have been infected so far. This is turn number {turn}.\n";
-
-        string prevChat = "";
-        if (chatHistory.Count > 0)
+        else
         {
-            prevChat = "\n\nPREVIOUS CHAT LOG:\n";
-            foreach(string chat in chatHistory.Skip(Math.Max(0, chatHistory.Count() - 5)))
+            // Only generate this sometimes
+            /*if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
             {
-                prevChat = prevChat + chat + "\n";
+                return;
+            }*/
+            actionLog = actionLog ?? "";
+            personalityParams = personalityParams ?? "";
+            
+            string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. In this game, one player (Player 0) takes on the role of a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Scanner players also don't want to tell the Trojan about their strategy too much. Assume messages are directed at other players rather than simply commenting on the game. Assume players refrain from discussing node numbers in too much depth.";
+            
+            string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
+
+            for(int i = 0; i < playersCount; i++)
+            {
+                if (i == 0 && player == 0 || i != 0)
+                {
+                    gameState = gameState + $"Player {i}: Node {GetPlayerPosition(i)}\n";
+                }
             }
+
+            string playerCountString = player == 0 ? "the only player" : $"one of {playersCount-1} players";
+            string playerInfoString = $"{(player == 0 ? $"Player {player} is the Trojan, being " : $"Player {player} is one of the Scanners, being")} {playerCountString} on their team.";
+
+            if (personalityParams.Length > 0 )
+            {
+                //string personality = string.Join(",", personalityParams);
+                playerInfoString = playerInfoString + $" Player {player} has a {personalityParams} personality.";
+            }
+            if(playerBotControllers[currentTurnPlayer] != null && !genContextOnly)
+            {
+                string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
+                if (emotion.Length > 0)
+                {
+                    playerInfoString = playerInfoString + $" Player {player} is currently feeling {emotion}.";
+                }
+            }
+
+            string extraInfoString = $" Out of {targetNodeIDs.Count} objectives, {infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length} have been infected so far. This is turn number {turn}.\n";
+
+            string prevChat = "";
+            if (chatHistory.Count > 0)
+            {
+                prevChat = "\n\nPREVIOUS CHAT LOG:\n";
+                foreach(string chat in chatHistory.Skip(Math.Max(0, chatHistory.Count() - 5)))
+                {
+                    prevChat = prevChat + chat + "\n";
+                }
+            }
+
+            string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\n";
+
+            string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <SELECT BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
+    
+            string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
+            chattedCurrentTurn.Add(player);
+            Debug.Log(inputText);
+            //HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
+            GroqAPIHandler.TextGeneration(inputText, OnAPIResult, OnAPIError);
         }
-
-        string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\n";
-
-        string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <SELECT BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
-   
-        string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
-        chattedCurrentTurn.Add(player);
-        Debug.Log(inputText);
-        //HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
-        GroqAPIHandler.TextGeneration(inputText, OnAPIResult, OnAPIError);
     }
 
     void OnAPIResult(string result)
@@ -844,7 +853,6 @@ public class GameController : MonoBehaviour
         string responseFormatted = ChatFormat(response.message);
         chatHistory.Add($"Player {response.player}: " + responseFormatted);
         gameHud.PlayerDialogue(currentTurnPlayer, response.emotion, responseFormatted);
-        
     }
     void OnAPIError(string error) 
     {
@@ -1107,14 +1115,25 @@ public class GameController : MonoBehaviour
         return list;
     }
 }
-
+public enum GenerationType
+{
+    ContextOnly,
+    ContextEmotion,
+    EmotionOnly,
+    Default
+}
+[System.Serializable]
 public class BotProfile{
     public string name;
-    public string bottype;
+    public int teamID;
+    public float cautiousFactor;
     public string personality;
-    public BotProfile(string name, string bottype, string personality){
+    public GenerationType generationType;
+    public BotProfile(string name, int teamID, float cautiousFactor, GenerationType generationType, string personality){
         this.name = name;
-        this.bottype = bottype;
+        this.teamID = teamID;
+        this.cautiousFactor = cautiousFactor;
+        this.generationType = generationType;
         this.personality = personality;
     }
 }

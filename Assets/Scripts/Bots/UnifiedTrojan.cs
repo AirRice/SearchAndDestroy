@@ -4,11 +4,11 @@ using UnityEngine;
 using System.Linq;
 using System.Data.Common;
 using Unity.VisualScripting;
+using System;
+using Random = UnityEngine.Random;
 
-public class CautiousTrojan : BotTemplate
+public class UnifiedTrojan : BotTemplate
 {
-    public readonly float risk_factor = 0.3f; // Chance of risk-taking: will ignore avoidance with this frequency
-    public readonly int avoid_dist = 2;
     private int curInfectTarget = -1;
     protected override int GetSpecialActionTarget()
     {
@@ -17,25 +17,45 @@ public class CautiousTrojan : BotTemplate
 
         if (curInfectTarget == -1)
         {
-            //Iterate over each target, selecting the furthest one from scanners                
-            int max = -1;
-            float maxdist = -1;
-            foreach (int tgt in targets)
+            int selected = -1;
+            //Iterate over each target, selecting the furthest/closest one (if cautious/greedy)              
+            float maxdist = -1;               
+            int mindist = 9999;
+            if (Random.value >= cautious_factor)
             {
-                float pathLen = gcr.GetDistFromHunters(tgt);
-                if(gcr.infectedNodeIDs.Contains(tgt))
+                foreach (int tgt in targets)
                 {
-                    // Skip ones that already are done.
-                    continue;
-                }
-                if(pathLen >= maxdist)
-                {
-                    maxdist = pathLen;
-                    max = tgt;
+                    int pathLen = gcr.GetPathLength(currentLocation,tgt);
+                    if(gcr.infectedNodeIDs.Contains(tgt))
+                    {
+                        // Skip ones that already are done.
+                        continue;
+                    }
+                    if(pathLen <= mindist)
+                    {
+                        mindist = pathLen;
+                        selected = tgt;
+                    }
                 }
             }
-
-            curInfectTarget = max;
+            else
+            {
+                foreach (int tgt in targets)
+                {
+                    float pathLen = gcr.GetDistFromHunters(tgt);
+                    if(gcr.infectedNodeIDs.Contains(tgt))
+                    {
+                        // Skip ones that already are done.
+                        continue;
+                    }
+                    if(pathLen >= maxdist)
+                    {
+                        maxdist = pathLen;
+                        selected = tgt;
+                    }
+                }
+            }
+            curInfectTarget = selected;
         }
         return curInfectTarget;
     }
@@ -55,7 +75,8 @@ public class CautiousTrojan : BotTemplate
         GameController gcr = GameController.gameController;
         if (actionsLeft >= gcr.movesCount)
         {
-            IncrementMood(selfMoodFactor * ((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.5f : 0.5f));
+            float cautionFactor = 0.25f + Math.Clamp(cautious_factor, 0f, 1f) * 0.25f;
+            IncrementMood(selfMoodFactor * ((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -cautionFactor : cautionFactor));
         }
     }
     protected override int GetMovementTarget(int specActionTarget)
@@ -72,12 +93,13 @@ public class CautiousTrojan : BotTemplate
         {
             int toMoveTo = -1;
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
-
-            if (nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) < gcr.GetDistFromHunters(nodesTowards[1]))
+            bool useCautious = Random.value >= cautious_factor;
+           
+            if (useCautious && nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) < gcr.GetDistFromHunters(nodesTowards[1]))
             {
                 toMoveTo = nodesTowards[1];
             }
-            else if (nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) > gcr.GetDistFromHunters(nodesTowards[1]))
+            else if (useCautious && nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) > gcr.GetDistFromHunters(nodesTowards[1]))
             {
                 toMoveTo = nodesTowards[0];
             }
@@ -94,7 +116,7 @@ public class CautiousTrojan : BotTemplate
         {
             // This shouldn't happen since the game would already be won by this point.
             int toMoveTo = SelectNextNodeRandom(currentLocation);
-            Debug.Log($"Moving to node id {toMoveTo} randomly");
+            Debug.Log($"Moving to node id {toMoveTo}");
             return toMoveTo;
         }
     }

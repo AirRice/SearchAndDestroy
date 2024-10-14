@@ -50,7 +50,7 @@ public class GreedyTrojan : BotTemplate
         GameController gcr = GameController.gameController;
         if (actionsLeft >= gcr.movesCount)
         {
-            IncrementMood((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.25f : 0.25f * selfMoodFactor);
+            IncrementMood(selfMoodFactor *((gcr.GetDistFromHunters(currentLocation) <= gcr.movesCount) ? -0.25f : 0.25f));
         }
     }
     protected override int GetMovementTarget(int specActionTarget)

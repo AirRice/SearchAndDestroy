@@ -4,10 +4,11 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 public abstract class BotTemplate : ScriptableObject
 {
-    protected bool useHardcodedText = false;
     protected int playerID;
     protected string personality;
     protected int currentLocation;
+    protected float cautious_factor;
+    protected GenerationType generationType = GenerationType.Default;
     protected abstract int GetMovementTarget(int specActionTarget);
     protected abstract int GetSpecialActionTarget();
     protected bool debugLogging = false;
@@ -24,6 +25,18 @@ public abstract class BotTemplate : ScriptableObject
     public void SetPersonalityParams(string personalityParams)
     {
         personality = personalityParams;
+    }
+    public void SetCautiousFactor(float cautiousFactor)
+    {
+        this.cautious_factor = cautiousFactor;
+    }
+    public void SetGenerationType(GenerationType generationType)
+    {
+        this.generationType = generationType;
+    }
+    public GenerationType GetGenerationType()
+    {
+        return generationType;
     }
     public void IncrementMood(float val)
     {

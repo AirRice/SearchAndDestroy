@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using static System.Math;
+using Random = UnityEngine.Random;
 public class UnifiedScan : BotTemplate
 {
     //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
     public static Dictionary<int,bool> possibleLocations = new();
-    public double doClosestNodeRatio = 0.5;
-    public double doClosestRandomThreshold = 0.8;
+    public float doClosestNodeRatio = 0.5f;
     private bool debugLogging = true;
     public override List<int> GetSuspectedTrojanLocs()
     {
@@ -28,7 +28,7 @@ public class UnifiedScan : BotTemplate
         {  
             return true;
         }
-        else if (Random.value >= doClosestRandomThreshold)
+        else if (Random.value >= cautious_factor)
         {
             return true;
         }
@@ -97,6 +97,10 @@ public class UnifiedScan : BotTemplate
         }
     }
 
+    public void ExternalSpecialAction(int specActionTarget)
+    {
+        OnSpecialAction(specActionTarget);
+    }
     protected override void OnSpecialAction(int specActionTarget)
     {
         GameController gcr = GameController.gameController;
@@ -137,14 +141,14 @@ public class UnifiedScan : BotTemplate
             IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
             IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
             IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
-            
+            /*
             foreach (int location in possibleLocsList)
             {
                 DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
                 textPopup.transform.position = Node.GetNode(location).transform.position + offset;
                 textPopup.SetText(location.ToString(), gcr.mainCam);
                 textPopup.SetColor(Color.red);
-            }
+            }*/
         }
     }
 
