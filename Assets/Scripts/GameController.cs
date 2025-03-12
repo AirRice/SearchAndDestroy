@@ -9,6 +9,7 @@ using System.Text;
 using System.Linq;
 using HuggingFace.API;
 using Random = UnityEngine.Random;
+using System.Data.Common;
 public class GameController : MonoBehaviour
 {
     public static GameController gameController;
@@ -92,7 +93,6 @@ public class GameController : MonoBehaviour
         useSmoothMove = cfg.useSmoothMove;
         autoProgressTurn = cfg.autoProcessTurn;
         playerBotType = cfg.playerBotType;
-        
         StartGame();
     }
 
@@ -113,7 +113,6 @@ public class GameController : MonoBehaviour
     {
         return localPlayerID==0 ? hiddenPlayerPiece : playerPiecesList[localPlayerID-1];
     }
-
     //Handling on-start variables, etc. Needed as game can restart.
     public void StartGame(bool restart = false)
     {
@@ -137,7 +136,6 @@ public class GameController : MonoBehaviour
         targetNodeIDs = new List<int>();
         cachedPaths = new Dictionary<(int,int), int[]>();
         nodeWasInfectedLastTurn = false;
-        FileLogger.mainInstance.IncrementRound();
         chatHistory.Clear();
         
         if(restart){
@@ -145,12 +143,6 @@ public class GameController : MonoBehaviour
         }
         this.SetupBoard();
         this.SetupBotPlayers();
-
-        if (logToCSV)
-        {
-            // Log the selected objectives using action 2
-            FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
-        }
         // Find marked spawns for each team
         try
         {
@@ -186,20 +178,31 @@ public class GameController : MonoBehaviour
         gameEnded = true;
 
         // Restart the game repeatedly if there are bot players
-        if (!noBotPlayers)
+        if (autoProgressTurn && !noBotPlayers)
         {
-            StartCoroutine(WaitToRestart());
+            RestartGame();
         }
+    }
+    public void RestartGame()
+    {
+        StartCoroutine(WaitToRestart());
     }
 
     // Wait to restart just to prevent slow loading related errors for restarting.
     IEnumerator WaitToRestart()
     {
         //Wait for 1 second
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.01f);
 
+        FileLogger.mainInstance.IncrementRound();
         if (FileLogger.mainInstance.GetCurrentRoundCount() < maxRoundCount)
         {
+            Debug.Log($"Starting Round {FileLogger.mainInstance.GetCurrentRoundCount()} of {maxRoundCount}");
+            if (logToCSV)
+            {
+                // Log the selected objectives using action 2
+                FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
+            }
             GameController.gameController.StartGame(true);
         }
         else
@@ -230,11 +233,24 @@ public class GameController : MonoBehaviour
     // BOT PROFILES
     public static readonly List<BotProfile> BotProfiles = new()
     {
-        new BotProfile("Human", -1, -1f, GenerationType.ContextOnly, ""),
-        new BotProfile("ClosestScanner", 1, 0f, GenerationType.ContextOnly, "Greedy, Shortsighted"),
-        new BotProfile("MiddleSplitScanner", 1, 1f, GenerationType.ContextOnly, "Cautious"),
-        new BotProfile("GreedyTrojan", 0, 0f, GenerationType.ContextOnly, "Greedy, Cocky"),
-        new BotProfile("CautiousTrojan", 0, 1f, GenerationType.ContextOnly, "Cautious, Calculated")
+        new BotProfile("Human", -1, -1f, GenerationType.ContextEmotion, ""),
+        new BotProfile("ClosestScanner", 1, 0f, GenerationType.ContextEmotion, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScanner", 1, 1f, GenerationType.ContextEmotion, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScanner", 1, 0f, GenerationType.ContextEmotion, "Egotistical, Loner"),
+        new BotProfile("GreedyTrojan", 0, 0f, GenerationType.ContextEmotion, "Greedy, Cocky"),
+        new BotProfile("CautiousTrojan", 0, 1f, GenerationType.ContextEmotion, "Cautious, Calculating, Guarded"),
+
+        new BotProfile("ClosestScannerE", 1, 0f, GenerationType.EmotionOnly, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScannerE", 1, 1f, GenerationType.EmotionOnly, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScannerE", 1, 0f, GenerationType.EmotionOnly, "Egotistical, Loner"),
+        new BotProfile("GreedyTrojanE", 0, 0f, GenerationType.EmotionOnly, "Greedy, Cocky"),
+        new BotProfile("CautiousTrojanE", 0, 1f, GenerationType.EmotionOnly, "Cautious, Calculating, Guarded"),
+
+        new BotProfile("ClosestScannerC", 1, 0f, GenerationType.ContextOnly, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScannerC", 1, 1f, GenerationType.ContextOnly, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScannerC", 1, 0f, GenerationType.ContextOnly, "Egotistical, Loner"),
+        new BotProfile("GreedyTrojanC", 0, 0f, GenerationType.ContextOnly, "Greedy, Cocky"),
+        new BotProfile("CautiousTrojanC", 0, 1f, GenerationType.ContextOnly, "Cautious, Calculating, Guarded"),
     };
 
     // Sets up the AI agents depending on the file-specified bot templates.
@@ -264,6 +280,12 @@ public class GameController : MonoBehaviour
             }
         }
     }
+    public bool GetPlayerIsHuman(int playerID)
+    {
+        BotProfile botProfile = BotProfiles.Where(v => v.name.Equals(playerBotType[playerID])).DefaultIfEmpty(null).First();
+        bool isHumanPlayer = playerBotControllers[playerID] == null || botProfile.name == "Human";
+        return isHumanPlayer;
+    }
     public float GetOthersAvgMood(int myTeam)
     {
         float sum = 0;
@@ -280,13 +302,22 @@ public class GameController : MonoBehaviour
                     sum += playerBotControllers[i].GetCurrentMood();
                     toCalc++;
                 }
+                else if (GetPlayerIsHuman(i))
+                {
+                    // If the other player is human, assume their mood is based on how many objs are taken vs how far into the game they are
+                    float objsRatio = (float)infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length/maxObjectives;
+                    float turnRatio = (float)GetTurnNumber()/maxTurnCount;
+                    bool isPositive = (turnRatio > objsRatio && i != 0) || (turnRatio < objsRatio && i == 0);
+                    sum += 0.5f * turnRatio * (isPositive ? 1 : -1);
+                    toCalc++;
+                }
             }
             
         }
         return sum/toCalc;
     }
 
-    public void IncrementMoodMultiple(int origin, bool allies, bool positive)
+    public void IncrementMoodMultiple(int origin, bool allies, bool positive, float mult = 1f)
     {
         for (int i=0; i < playersCount; i++)
         {
@@ -296,7 +327,7 @@ public class GameController : MonoBehaviour
             {
                 if (playerBotControllers[i] != null)
                 {
-                    playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (allies ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor));
+                    playerBotControllers[i].IncrementMood((positive ? 1 : -1) * (allies ? playerBotControllers[i].friendMoodFactor : playerBotControllers[i].enemyMoodFactor) * mult);
                 }
             }
         }
@@ -375,6 +406,11 @@ public class GameController : MonoBehaviour
             int oppositeChosenTarget = mapSize*mapSize-(randomChosenTarget-1);
             AddTargetNodeID(oppositeChosenTarget);
         }
+        if (logToCSV)
+        {
+            // Log the selected objectives using action 2
+            FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
+        }
         gameHud.UpdateObjectivesData(maxObjectives*2, 0);
         mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
     }
@@ -434,7 +470,7 @@ public class GameController : MonoBehaviour
     // returns the int we ended up at
     public int TryMoveToNode(int toMoveTo)
     {
-        int[] movePath = GetCappedPath(GetActivePlayerPosition(), toMoveTo, currentPlayerMoves);
+        int[] movePath = GetCappedPath(GetActivePlayerPosition(), toMoveTo, localPlayerID, currentPlayerMoves);
         if(movePath.Length <= 0)
         {
             return -1;
@@ -537,6 +573,8 @@ public class GameController : MonoBehaviour
 
         if (targetNodeIDs.Contains(toInfect.nodeID)) 
         {
+            float objsRatio = (float)infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length/maxObjectives;
+            IncrementMoodMultiple(currentTurnPlayer, false, false, objsRatio* 0.9f + 0.1f);
             gameHud.UpdateObjectivesData(maxObjectives, infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length);
             if (localPlayerID != 0)
             {
@@ -593,7 +631,7 @@ public class GameController : MonoBehaviour
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
         }
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
-        Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
+        //Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
     }
     public List<int> GetClosestAdjToDest(int sourceID, int destID)
@@ -610,6 +648,41 @@ public class GameController : MonoBehaviour
             }
         }
         return closestNodes;
+    }
+
+    public string GetTargetDirectionString(int sourceID, int[] destIDs)
+    {
+        //Debug.Log(sourceID + " to nodes " + string.Join("," , destIDs));
+        // Direction is calculated as numpad notation; get avg for compound directions.
+        Dictionary<int, string> _numpadDirs = new()
+        {
+            { 1, "southwest"},
+            { 2, "south"},
+            { 3, "southeast"},
+            { 4, "west"},
+            { 6, "east"},
+            { 7, "northwest"},
+            { 8, "north"},
+            { 9, "northeast"},
+        };
+        int[] adjs = GetAdjacentNodes(sourceID);
+        int dirs = 0;
+        foreach (int destID in destIDs)
+        {
+            if (adjs.Contains(destID))
+            {
+                if(Math.Abs(sourceID - destID) == 1)
+                {
+                    dirs += sourceID > destID ? 1 : 9;
+                }
+                else if(sourceID != destID && Math.Abs(sourceID - destID) % mapSize == 0)
+                {
+                    dirs += sourceID > destID ? 7 : 3;
+                }
+            }
+        }
+        
+        return _numpadDirs[dirs / (destIDs.Length > 1 ? 2 : 1)];
     }
     public List<int> GetDestsClosestToAdjs(int sourceID, int[] selectedAdjs)
     {
@@ -679,29 +752,22 @@ public class GameController : MonoBehaviour
         {
             //return;    
         }
+        
         if(increment)
         {
             turnCount++;
             currentTurnPlayer++;
             currentTurnPlayer %= this.playersCount;
-            mainCam.GetComponent<CameraMover>().ClearFollowTarget();
             if(this.hotSeatMode)
             {
                 localPlayerID = currentTurnPlayer;
-            }
-            if (currentTurnPlayer == localPlayerID)
-            {
-                mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
-            }
-            else
-            {
-                mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
             }
             if(GetTurnNumber()>maxTurnCount)
             {
                 EndGame(false);
             }
         }
+
         gameHud.ResetPlayerActionButton();
         currentPlayerMoves = movesCount;
         currentPlayerDidSpecialAction = false;
@@ -717,17 +783,47 @@ public class GameController : MonoBehaviour
         if(currentTurnPlayer==0)
         {
             // Reset the per turn player index for the algorithms
-            ClosestScan.algoPlayerInTurn = 0;
+
+            // Resets for deprecated scripts
+            /*ClosestScan.algoPlayerInTurn = 0;
             MiddleSplitScan.algoPlayerInTurn = 0;
-            MiddleSplitScan.algoPlayerLocs = new();
+            MiddleSplitScan.algoPlayerLocs = new();*/
+
             shouldUpdateScannerKnowledge = true;
             chattedCurrentTurn.Clear();
+            for (int i=0; i<playersCount; i++)
+            {
+                if (playerBotControllers[i] != null)
+                {
+                    playerBotControllers[i].DecayMood(); // Decays the current mood at the beginning of the turn (rather than simply resetting to 0)
+                }
+            }       
             this.StartHiddenTurn();
         }
         else if(localPlayerID != 0)
         {
             if(hiddenPlayerPiece != null)
                 Destroy(hiddenPlayerPiece.gameObject);
+        }
+        foreach (PlayerPiece pp in playerPiecesList){
+            pp.SetPlayerMarker(false);
+        }
+        if(hiddenPlayerPiece != null)
+        {
+            hiddenPlayerPiece.SetPlayerMarker(false);
+        }
+        mainCam.GetComponent<CameraMover>().ClearFollowTarget();
+        if (currentTurnPlayer == localPlayerID)
+        {
+            PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
+            mainCam.transform.position = localPlayerPiece.gameObject.transform.position + new Vector3(0,12.5f,0);
+            if(localPlayerPiece != null) {
+                localPlayerPiece.SetPlayerMarker(true);
+            }
+        }
+        else
+        {
+            mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
         }
         if(playerBotControllers[currentTurnPlayer] != null)
         {
@@ -751,7 +847,7 @@ public class GameController : MonoBehaviour
                 infectedNodeIDs.Remove(nodePair.Value.nodeID);
             }
         }
-        if(localPlayerID == 0)
+        if(localPlayerID == 0 && hiddenPlayerPiece == null)
         {
             //Debug.Log("Making new hidden player piece");
             PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -771,15 +867,15 @@ public class GameController : MonoBehaviour
     public void GenerateStatusString(int player, string actionLog = null, string personalityParams = null)
     {
         int turn = GetTurnNumber();
-        GenerationType genType = playerBotControllers[currentTurnPlayer].GetGenerationType();
+        GenerationType genType = playerBotControllers[player].GetGenerationType();
         bool genContextOnly = genType == GenerationType.ContextOnly;
         if(genType == GenerationType.EmotionOnly)
         {
-            string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
-            string message = playerBotControllers[currentTurnPlayer].GetRandomBark();
+            string emotion = playerBotControllers[player].GetCurrentEmotion();
+            string message = playerBotControllers[player].GetRandomBark();
             string responseFormatted = ChatFormat(message);
             chatHistory.Add($"Player {player}: " + responseFormatted);
-            gameHud.PlayerDialogue(currentTurnPlayer, emotion, responseFormatted);
+            gameHud.PlayerDialogue(player, emotion, responseFormatted);
 
         }
         else
@@ -812,9 +908,9 @@ public class GameController : MonoBehaviour
                 //string personality = string.Join(",", personalityParams);
                 playerInfoString = playerInfoString + $" Player {player} has a {personalityParams} personality.";
             }
-            if(playerBotControllers[currentTurnPlayer] != null && !genContextOnly)
+            if(playerBotControllers[player] != null && !genContextOnly)
             {
-                string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
+                string emotion = playerBotControllers[player].GetCurrentEmotion();
                 if (emotion.Length > 0)
                 {
                     playerInfoString = playerInfoString + $" Player {player} is currently feeling {emotion}.";
@@ -833,11 +929,11 @@ public class GameController : MonoBehaviour
                 }
             }
 
-            string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\n";
+            string instruction = $"TASK:\nIn JSON format, generate a message from player {player} in an in-game discussion at this moment. Also associate the generated message with one of the given emotions.\nFollow the provided JSON format for the output, as the response will be unusable otherwise.\nNOTE: The provided emotion MUST be one of (angry, confused, content, fear, gloating, happy, sad, surprised, neutral). Other emotions are not valid.";
 
-            string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <SELECT BETWEEN angry, confused, content, fear, gloating, happy, sad, surprised>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
+            string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <EMOTION>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
     
-            string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
+            string inputText = gameDefinition + playerInfoString + gameState + extraInfoString + actionLog +  prevChat + instruction + responseFormatting;
             chattedCurrentTurn.Add(player);
             Debug.Log(inputText);
             //HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
@@ -853,6 +949,7 @@ public class GameController : MonoBehaviour
         string responseFormatted = ChatFormat(response.message);
         chatHistory.Add($"Player {response.player}: " + responseFormatted);
         gameHud.PlayerDialogue(currentTurnPlayer, response.emotion, responseFormatted);
+        
     }
     void OnAPIError(string error) 
     {
@@ -884,7 +981,7 @@ public class GameController : MonoBehaviour
             {
                 if(gameHud.playerActionButtonDown)
                     return;
-                int[] highlightedPath = GetCappedPath(localPlayerPiece.currentNodeID, thisNode.nodeID, currentPlayerMoves);
+                int[] highlightedPath = GetCappedPath(localPlayerPiece.currentNodeID, thisNode.nodeID, localPlayerID, currentPlayerMoves);
                 int moveSpend = (movesCount-currentPlayerMoves)+highlightedPath.Length - 1;
                 TryPathHighlight(highlightedPath, true);
                 if(currentPlayerMoves>0)
@@ -902,9 +999,10 @@ public class GameController : MonoBehaviour
     }
     public void OnNodeClicked(Node thisNode)
     {
+        bool isSpecialClick = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) || gameHud.playerActionButtonDown;       
         if(gameEnded)
             return;
-        if(!gameHud.playerActionButtonDown)
+        if(!isSpecialClick)
             TryMoveToNode(thisNode.nodeID);
         else
         {
@@ -984,11 +1082,11 @@ public class GameController : MonoBehaviour
         }
     }
     
-    public int[] GetCappedPath(int startPointID, int endPointID, int maxhops = -1)
+    public int[] GetCappedPath(int startPointID, int endPointID, int playerID, int maxhops = -1)
     {
         if (!cachedPaths.TryGetValue((startPointID, endPointID), out int[] foundPathRaw))
         {
-            foundPathRaw = this.SearchPath(startPointID, endPointID);
+            foundPathRaw = this.SearchPath(startPointID, endPointID, playerID == 0);
             if (infectedNodeIDs.Intersect(foundPathRaw).ToArray().Count() <= 0)
             {
                 cachedPaths.Add((startPointID, endPointID), foundPathRaw);
@@ -1000,7 +1098,7 @@ public class GameController : MonoBehaviour
             return foundPathRaw.Take(maxhops+1).ToArray();
     }
 
-    public int[] SearchPath(int startPointID, int endPointID)
+    public int[] SearchPath(int startPointID, int endPointID, bool isTrojan = false)
     //Tried implementing BFS, unsure if the most robust or fast
     //Adapted from python implementation https://stackoverflow.com/questions/8922060/how-to-trace-the-path-in-a-breadth-first-search/50575971#50575971
     {
@@ -1021,7 +1119,7 @@ public class GameController : MonoBehaviour
             foreach(NodeLink link in nodeLinksList)
             {
                 int? otherNode = link.getOtherNode(vpath.Item1);
-                if(otherNode.HasValue && infectedNodeIDs.Contains(otherNode.Value) && localPlayerID != 0)
+                if(otherNode.HasValue && infectedNodeIDs.Contains(otherNode.Value) && !isTrojan)
                     continue;
                 if(otherNode == endPointID)
                     return vpath.Item2.Concat(new int[] {endPointID}).ToArray();
@@ -1040,9 +1138,13 @@ public class GameController : MonoBehaviour
         }
         return new int[0];
     }
-    public int GetPathLength(int startPointID, int endPointID)
+    public int GetPathLength(int startPointID, int endPointID, int playerID = -1)
     {
-        int[] pathTo = GetCappedPath(startPointID,endPointID);
+        if (playerID == -1)
+        {
+            playerID = currentTurnPlayer;
+        }
+        int[] pathTo = GetCappedPath(startPointID, endPointID, playerID);
         //Debug.Log($"{string.Join(",", pathTo)}");
         int dist = pathTo.Length-1;
         return dist;

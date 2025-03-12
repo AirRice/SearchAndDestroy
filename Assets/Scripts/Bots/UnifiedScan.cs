@@ -9,7 +9,8 @@ public class UnifiedScan : BotTemplate
     //Node ID dict: int node ID, bool is if possible. Initialised in this way to reduce overhead when iterating.
     public static Dictionary<int,bool> possibleLocations = new();
     public float doClosestNodeRatio = 0.5f;
-    private bool debugLogging = true;
+    public float smallPossibleLocsRatio = 0.25f;
+    private bool debugLogging = false;
     public override List<int> GetSuspectedTrojanLocs()
     {
         return (from kvp in UnifiedScan.possibleLocations where kvp.Value select kvp.Key).ToList();
@@ -42,7 +43,8 @@ public class UnifiedScan : BotTemplate
         // If no info exists for the turn, scan in place just for some information
         if (GetSuspectedTrojanLocs().Count <= 0)
         {
-            Debug.Log("No info found - scanning in place");
+            if (debugLogging)
+                Debug.Log("No info found - scanning in place");
             return currentLocation;
         }
         else if (ShouldScanClosest())
@@ -118,7 +120,7 @@ public class UnifiedScan : BotTemplate
             }
             List<int> nodesInDir = gcr.GetDestsClosestToAdjs(prevScan.Item1, prevScan.Item2);
             List<int> possibleLocsList = GetSuspectedTrojanLocs();
-            int initialPossibleLocsCount = possibleLocsList.Count;
+            List<int> initialPossibleLocs = possibleLocsList;
             if (possibleLocsList.Count > 0)
             {
                 int[] possible_truncated = possibleLocsList.Except(nodesInDir).ToArray();
@@ -134,14 +136,35 @@ public class UnifiedScan : BotTemplate
                     UnifiedScan.possibleLocations[id] = true;
                 }
             }
-
+            // Don't consider already infected nodes
+            foreach (int id in possibleLocsList)
+            {
+                if (gcr.infectedNodeIDs.Contains(id))
+                {
+                    UnifiedScan.possibleLocations[id] = false;
+                }
+            }
             possibleLocsList = GetSuspectedTrojanLocs();
-            Vector3 offset = new(0,0.55f,0);
-            int postPossibleLocsCount = possibleLocsList.Count;
-            IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
+            List<int> postPossibleLocs = possibleLocsList;
+            if (initialPossibleLocs.Intersect(postPossibleLocs).ToArray().Length <= initialPossibleLocs.Count * 0.1)
+            {
+                // Bad scan: The new scan area has almost nothing in common with the original scan.
+                IncrementMood(selfMoodFactor * -1);
+                IncrementMoodOthers(true, false);
+                IncrementMoodOthers(false, true);
+            }
+            if (prevScan.Item2.Length == 1 || ((double)possibleLocsList.Count/(gcr.mapSize * gcr.mapSize) <= smallPossibleLocsRatio) && possibleLocsList.Count > 0)
+            {
+                // It's a lucky scan right on the diagonal or there is a small amount of possible locations, this gives a lot of info.
+                IncrementMood(selfMoodFactor);
+                IncrementMoodOthers(true, true);
+                IncrementMoodOthers(false, false);
+            }
+            /*IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
             IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
-            IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);
-            /*
+            IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);*/
+          
+            /*Vector3 offset = new(0,0.55f,0);
             foreach (int location in possibleLocsList)
             {
                 DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -160,11 +183,37 @@ public class UnifiedScan : BotTemplate
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation, specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            if(debugLogging)
+            if (!gcr.infectedNodeIDs.Contains(potential_target))
             {
-                Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
+                if(debugLogging)
+                {
+                    Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
+                }
+                return potential_target;
             }
-            return potential_target;
+            else
+            {
+                int[] detourPath = gcr.GetCappedPath(currentLocation, specActionTarget, playerID, 3);
+                if (detourPath.Length > 1)
+                {
+                    int detourPathTarget = detourPath[1];
+                    if(debugLogging)
+                    {
+                        Debug.Log($"target node to scan is {specActionTarget}, heading to node {detourPathTarget}");
+                    }
+                    return detourPathTarget;
+                }
+                else
+                {
+                    // The pathfinding failed, somehow
+                    int toMoveTo = SelectNextNodeRandom(currentLocation);
+                    if(debugLogging)
+                    {
+                        Debug.Log($"Moving to node id {toMoveTo} randomly");
+                    }
+                    return toMoveTo;
+                }
+            }
         }
         else
         {
@@ -176,6 +225,15 @@ public class UnifiedScan : BotTemplate
             }
             return toMoveTo;
         }
+    }
+    protected override void OnPlayerTurnEnd()
+    {
+        GameController gcr = GameController.gameController;
+        float objsRatio = (float)gcr.infectedNodeIDs.Intersect(gcr.targetNodeIDs).ToArray().Length/gcr.maxObjectives;
+        float turnRatio = (float)gcr.GetTurnNumber()/gcr.maxTurnCount;
+        
+        // Pressure the scanner: affect their mood based on the difference in ratio between current turn/max turn vs taken objectives/max objectives
+        IncrementMood(selfMoodFactor * turnRatio * ((turnRatio > objsRatio) ? 1 : -1));
     }
     protected override void HandleTurn(int playerID, int actionsLeft)
     {

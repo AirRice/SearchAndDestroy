@@ -74,12 +74,13 @@ public class GameHud : MonoBehaviour
     private void RestartOnClicked(ClickEvent evt)
     {
         if (GameController.gameController.gameEnded)
-            GameController.gameController.StartGame(true);
+            GameController.gameController.RestartGame();
     }
     // Start is called before the first frame update
     void Start()
     {
-        
+        emotionImage.style.backgroundImage = null;
+        labelPlayerDialogue.text = "";
     }
 
     // Update is called once per frame
@@ -112,9 +113,13 @@ public class GameHud : MonoBehaviour
             labelCurPlayer.text = "Current Player: "+ (gameCurrentTurnPlayer == 0 ? "The Trojan" : $"Scanner {gameCurrentTurnPlayer}");
             buttonPlayerAction.text = gameCurrentTurnPlayer == 0 ? "Infect Node" : "Scan"; 
             labelTurnCounter.text = "Turn: "+ (1+Mathf.FloorToInt(GameController.gameController.turnCount / GameController.gameController.playersCount));
+            bool curPlayerIsLocal = (gameCurrentTurnPlayer==gameLocalPlayer);
+
+            buttonPlayerAction.visible = curPlayerIsLocal;
+            
             foreach(Label moveIndicator in labelsMoveIndicator)
             {
-                moveIndicator.visible = (gameCurrentTurnPlayer==gameLocalPlayer);
+                moveIndicator.visible = curPlayerIsLocal;
             }
         }
         else
@@ -145,10 +150,31 @@ public class GameHud : MonoBehaviour
             labelsMoveIndicator[i].style.left = i < tospend ? 24 : 0;
         }
     }
-
+    private readonly Dictionary<string, string> OCCEmotionToImage = new(){
+        {"Relief", "Images/emotions/content"},
+        {"Resignation", "Images/emotions/fear"}, // Resignation is Fears Confirmed in OCC Model.
+        {"Content", "Images/emotions/content"}, //Content is Satisfaction in OCC Model
+        {"Surprise", "Images/emotions/surprised"}, //External to OCC model - when expectation differs from new revelation dramatically
+        {"Confusion", "Images/emotions/confusion"}, //Also when expectation differs from new revelation dramatically
+        {"Disappointment", "Images/emotions/sad"},
+        {"Joy", "Images/emotions/happy"},
+        {"Distress", "Images/emotions/sad"},
+        {"Gloating", "Images/emotions/gloating"},
+        {"Resentment", "Images/emotions/angry"},
+        {"Neutral", "Images/emotions/neutral"}
+    };
     public void PlayerDialogue(int player, string emotion, string msg)
     {
-        Texture2D emotionImg = Resources.Load<Texture2D>("Images/emotions/"+emotion);
+        string emotionimgpath;
+        if (OCCEmotionToImage.ContainsKey(emotion))
+        {
+            emotionimgpath = OCCEmotionToImage[emotion];
+        }
+        else
+        {
+            emotionimgpath = "Images/emotions/" + emotion;
+        }
+        Texture2D emotionImg = Resources.Load<Texture2D>(emotionimgpath);
         if (emotionImg)
         {
             emotionImage.style.backgroundImage = emotionImg;

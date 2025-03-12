@@ -7,7 +7,7 @@ public class LoadData : MonoBehaviour
     private static readonly string filePath = System.IO.Path.Combine(Application.dataPath, "config.json");
     public static ConfigDataList Load(){
         
-        Debug.Log(filePath);
+        //Debug.Log(filePath);
         string data = System.IO.File.ReadAllText(filePath);
         ConfigDataList cfglist = JsonUtility.FromJson<ConfigDataList>(data);
         return cfglist;
@@ -15,7 +15,7 @@ public class LoadData : MonoBehaviour
     public static void Save(ConfigDataList cfgData)
     {
         string jsonString = JsonUtility.ToJson(cfgData);
-        Debug.Log(jsonString);
+        //Debug.Log(jsonString);
         System.IO.File.WriteAllText(filePath, jsonString);
     }
 }

@@ -57,6 +57,7 @@ public class UnifiedTrojan : BotTemplate
             }
             curInfectTarget = selected;
         }
+        
         return curInfectTarget;
     }
     protected override void OnSpecialAction(int specActionTarget)
@@ -67,7 +68,6 @@ public class UnifiedTrojan : BotTemplate
         {
             curInfectTarget = -1;
             IncrementMood(selfMoodFactor);
-            IncrementMoodOthers(false, false);
         }
     }
     protected override void HandleTurn(int playerID, int actionsLeft)
@@ -93,7 +93,7 @@ public class UnifiedTrojan : BotTemplate
         {
             int toMoveTo = -1;
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
-            bool useCautious = Random.value >= cautious_factor;
+            bool useCautious = Random.value <= cautious_factor;
            
             if (useCautious && nodesTowards.Count == 2 && gcr.GetDistFromHunters(nodesTowards[0]) < gcr.GetDistFromHunters(nodesTowards[1]))
             {
@@ -109,14 +109,16 @@ public class UnifiedTrojan : BotTemplate
                 toMoveTo = nodesTowards[rand_index];
             }
 
-            Debug.Log($"target node to infect is {specActionTarget}, heading to node {toMoveTo}");
+            if (debugLogging)
+                Debug.Log($"target node to infect is {specActionTarget}, heading to node {toMoveTo}");
             return toMoveTo;
         }
         else
         {
             // This shouldn't happen since the game would already be won by this point.
             int toMoveTo = SelectNextNodeRandom(currentLocation);
-            Debug.Log($"Moving to node id {toMoveTo}");
+            if (debugLogging)
+                Debug.Log($"Moving to node id {toMoveTo}");
             return toMoveTo;
         }
     }
