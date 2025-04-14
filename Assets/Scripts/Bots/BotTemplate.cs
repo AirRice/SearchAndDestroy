@@ -83,7 +83,7 @@ public abstract class BotTemplate : ScriptableObject
         {
             HandleAction(playerID, actionsLeft);
             int specActionTarget = GetSpecialActionTarget();
-            if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
+            if(isHiddenBot && gcr.GetNodeDist(currentLocation,specActionTarget) == 1)
             {
                 if(debugLogging)
                 {

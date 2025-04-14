@@ -73,3 +73,12 @@ crashlytics-build.properties
 /[Aa]ssets/[Rr]esources/HuggingFaceAPIConfig.asset
 Assets/Resources/groqAPIKey.txt
 Assets/Resources/groqAPIKey.txt.meta
+Assets/Scripts/Bots/BotTemplate.puml
+Assets/Scripts/Bots/BotTemplate.puml.meta
+Assets/Scripts/Bots/SoloScan.puml
+Assets/Scripts/Bots/SoloScan.puml.meta
+Assets/Scripts/Bots/UnifiedScan.puml
+Assets/Scripts/Bots/UnifiedScan.puml.meta
+Assets/Scripts/Bots/UnifiedTrojan.puml
+Assets/Scripts/Bots/UnifiedTrojan.puml.meta
+out/Assets/Scripts/Bots/BotTemplate/BotTemplate.svg

@@ -25,7 +25,7 @@ public class UnifiedTrojan : BotTemplate
             {
                 foreach (int tgt in targets)
                 {
-                    int pathLen = gcr.GetPathLength(currentLocation,tgt);
+                    int pathLen = gcr.GetNodeDist(currentLocation,tgt);
                     if(gcr.infectedNodeIDs.Contains(tgt))
                     {
                         // Skip ones that already are done.
