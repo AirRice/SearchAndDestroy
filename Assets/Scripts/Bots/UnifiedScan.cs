@@ -160,10 +160,6 @@ public class UnifiedScan : BotTemplate
                 IncrementMoodOthers(true, true);
                 IncrementMoodOthers(false, false);
             }
-            /*IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
-            IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
-            IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);*/
-          
             /*Vector3 offset = new(0,0.55f,0);
             foreach (int location in possibleLocsList)
             {
