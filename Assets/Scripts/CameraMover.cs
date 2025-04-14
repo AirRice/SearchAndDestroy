@@ -49,7 +49,7 @@ public class CameraMover : MonoBehaviour
             horizontalInput = Input.GetAxis("Horizontal");
             mWheelInput = Input.GetAxis("Mouse ScrollWheel");
 
-            /*float mousePosX = Input.mousePosition.x;
+            float mousePosX = Input.mousePosition.x;
             float mousePosY = Input.mousePosition.y;
 
             if (mousePosX > Screen.width - edgesize){
@@ -64,7 +64,6 @@ public class CameraMover : MonoBehaviour
             if (mousePosY < edgesize){
                 verticalInput = -1f;
             }       
-            */
 
             transform.Translate(speed * verticalInput * Time.deltaTime * Vector3.up);
             transform.Translate(speed * horizontalInput * Time.deltaTime * Vector3.right);

@@ -1,22 +1,26 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 public abstract class BotTemplate : ScriptableObject
 {
-    protected bool useHardcodedText = false;
     protected int playerID;
     protected string personality;
     protected int currentLocation;
+    protected float cautious_factor;
+    protected GenerationType generationType = GenerationType.Default;
     protected abstract int GetMovementTarget(int specActionTarget);
     protected abstract int GetSpecialActionTarget();
     protected bool debugLogging = false;
     protected List<PlayerAction> actionLog = new();
     protected float currentMood = 0;
     protected float prevMood = 0;
-    public float selfMoodFactor = 0.3f; // How much self-actions affect mood
+    public float selfMoodFactor = 0.15f; // How much self-actions affect mood
     public float friendMoodFactor = 0.1f; // How much ally actions affect mood
     public float enemyMoodFactor = 0.3f; // How much enemy actions affect mood
+    public float useAltMoodsFactor = 0.5f; // Chance to use surprise/confusion/resentment/gloating.
     public void SetPlayerID(int ID)
     {
         playerID = ID;   
@@ -25,9 +29,21 @@ public abstract class BotTemplate : ScriptableObject
     {
         personality = personalityParams;
     }
+    public void SetCautiousFactor(float cautiousFactor)
+    {
+        this.cautious_factor = cautiousFactor;
+    }
+    public void SetGenerationType(GenerationType generationType)
+    {
+        this.generationType = generationType;
+    }
+    public GenerationType GetGenerationType()
+    {
+        return generationType;
+    }
     public void IncrementMood(float val)
     {
-        //Debug.Log($"Player {playerID}'s mood incremented by {val}");
+        Debug.Log($"Player {playerID}'s mood incremented by {val}");
         currentMood += val;
     }
     public void IncrementMoodOthers(bool allies, bool positive)
@@ -39,12 +55,15 @@ public abstract class BotTemplate : ScriptableObject
     {
         return null;
     }
+    public void DecayMood(float mult = 0.5f)
+    {
+        currentMood *= mult;
+    }
     public IEnumerator ProcessTurn(int currentNodeID, int actionsLeft)
     {
         bool isHiddenBot = playerID == 0;
-        actionLog.Clear();
         prevMood = currentMood;
-        currentMood = 0;
+        actionLog.Clear();
         if(debugLogging)
         {
             Debug.Log($"Processing turn for player {playerID}");
@@ -144,13 +163,16 @@ public abstract class BotTemplate : ScriptableObject
     // Simple OCC based emotion simulation.
     private readonly Dictionary<string, string> EmotionBarkFilepaths = new(){
         {"Relief", "Barks/relief"},
-        {"Resignation", "Barks/fearsconfirmed"}, // Resignation is Fears Confirmed in OCC Model.
+        {"Resignation", "Barks/distress"}, // Resignation is Fears Confirmed in OCC Model. Combined to distress
         {"Content", "Barks/content"}, //Content is Satisfaction in OCC Model
-        {"Disappointment", "Barks/disappointment"},
-        {"Joy", "Barks/joy"},
+        {"Surprise", "Barks/surprise"}, //External to OCC model - when expectation differs from new revelation dramatically
+        {"Confusion", "Barks/surprise"}, // Combined to surprise although some differences exist.
+        {"Disappointment", "Barks/disappointment"}, 
+        {"Joy", "Barks/content"}, // Combined to content
         {"Distress", "Barks/distress"},
         {"Gloating", "Barks/gloating"},
-        {"Resentment", "Barks/resentment"}
+        {"Resentment", "Barks/resentment"},
+        {"Neutral", "Barks/neutral"}
     };
     
     public string GetRandomBark()
@@ -183,13 +205,10 @@ public abstract class BotTemplate : ScriptableObject
                     }
                     else
                     {
+                        lastActionString += $"Scanned for the Trojan, finding that they are to the {GameController.gameController.GetTargetDirectionString(act.nodeFrom, act.nodeTargets)}\n";
                         if (GetSuspectedTrojanLocs() != null && GetSuspectedTrojanLocs().Count > 0)
                         {
-                            lastActionString += $"Scanned for the Trojan, and now suspects the Trojan is at one of these nodes:({string.Join(",",GetSuspectedTrojanLocs())})\n";
-                        }
-                        else
-                        {
-                            lastActionString += $"Scanned for the Trojan, finding that they are in the direction of node(s) {string.Join(",", act.nodeTargets)}\n";
+                            lastActionString += $"The player now suspects the Trojan is at one of these nodes:({string.Join(",",GetSuspectedTrojanLocs())})\n";
                         }
                     }
                     break;
@@ -205,72 +224,53 @@ public abstract class BotTemplate : ScriptableObject
         GameController gcr = GameController.gameController;
         Debug.Log($"Player {playerID} current mood: {currentMood} prev mood: {prevMood}");
         float othersMood = gcr.GetOthersAvgMood(playerID == 0 ? 0 : 1);
-        if(prevMood < 0)
+        if (Random.value > useAltMoodsFactor)
         {
-            //Fear - Expected consequence negative
-            if (currentMood > 0)
+            if (Math.Abs(currentMood - prevMood) > 0.3)
             {
-                // Relief
-                return "Relief";
+                return currentMood >= 0 ? "Surprise" : "Confusion";
             }
-            else if (currentMood < 0)
+            else if ((prevMood * currentMood) > 0)
             {
-                //Resignation
-                return "Resignation";
-            }
-            else{
-                if (othersMood > 0)
+                if (currentMood < 0 && othersMood > 0)
                 {
                     // Resentment
                     return "Resentment";
                 }
-                else if (othersMood < 0)
+                else if (currentMood > 0 && othersMood < 0)
                 {
                     // Gloating
                     return "Gloating";
                 }
             }
         }
-        else if(prevMood > 0)
+        if (Math.Abs(prevMood) >= 0.05)
         {
-            //Hope - Expected consequence positive
-            if (currentMood > 0)
+            
+            if (Math.Abs(currentMood) >= 0.05)
             {
-                // Satisfaction
-                return "Content"; 
-            }
-            else if (currentMood < 0)
-            {
-                //Disappointment
-                return "Disappointment";
-            }
-            else{
-                if (othersMood > 0)
+                if(prevMood < 0)
+                //Fear - Expected consequence negative
                 {
-                    // Resentment
-                    return "Resentment";
+                    return currentMood > 0 ? "Relief" : "Resignation";
                 }
-                else if (othersMood < 0)
+                else if(prevMood > 0)
+                //Hope - Expected consequence positive
                 {
-                    // Gloating
-                    return "Gloating";
+                    return currentMood > 0 ? "Content" : "Disappointment";
                 }
             }
         }
         else
         {
-            if (currentMood > 0)
+            // Neutral prev mood
+            if (Math.Abs(currentMood) >= 0.05)
             {
-                // Joy
-                return "Joy";
-            }
-            else if (currentMood < 0)
-            {
-                // Distress
-                return "Distress";
+                return currentMood > 0 ? "Joy" : "Distress";
             }
         }
-        return "";
+        // Not feeling strongly at the moment
+        return "Neutral";
     }
 }
 

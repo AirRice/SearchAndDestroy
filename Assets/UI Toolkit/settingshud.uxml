@@ -15,8 +15,8 @@
             <ui:Toggle label="Auto Progress Turn" name="autoProcessTurnToggle" style="font-size: 16px;" />
             <ui:Label text="Algorithm Settings" display-tooltip-when-elided="true" style="font-size: 20px;" />
             <ui:DropdownField label="Trojan Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="trojanBotDropdown" />
-            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot1Dropdown" />
-            <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot2Dropdown" style="display: flex;" />
+            <ui:DropdownField label="Scanner Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot1Dropdown" />
+            <ui:DropdownField label="Scanner Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot2Dropdown" style="display: flex;" />
             <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot3Dropdown" style="display: flex; opacity: 1; visibility: hidden;" />
             <ui:DropdownField label="Hunter Player" index="-1" choices="System.Collections.Generic.List`1[System.String]" name="hunterBot4Dropdown" style="display: flex; visibility: hidden;" />
             <ui:VisualElement style="flex-direction: row; justify-content: space-around; align-items: stretch;">
