@@ -10,7 +10,7 @@ public class UnifiedScan : BotTemplate
     public static Dictionary<int,bool> possibleLocations = new();
     public float doClosestNodeRatio = 0.5f;
     public float smallPossibleLocsRatio = 0.25f;
-    private bool debugLogging = true;
+    private int lastUpdatedScannerKnowledge = -1;
     public override List<int> GetSuspectedTrojanLocs()
     {
         return (from kvp in UnifiedScan.possibleLocations where kvp.Value select kvp.Key).ToList();
@@ -41,15 +41,16 @@ public class UnifiedScan : BotTemplate
         List<(int,int[])> prevScans = gcr.scanHistory;
         List<int> possibleLocationsList = GetSuspectedTrojanLocs();
         // If no info exists for the turn, scan in place just for some information
-        if (GetSuspectedTrojanLocs().Count <= 0)
+        if (possibleLocationsList.Count <= 0)
         {
-            Debug.Log("No info found - scanning in place");
+            if (debugLogging)
+                Debug.Log("No info found - scanning in place");
             return currentLocation;
         }
         else if (ShouldScanClosest())
         {
             // If we are the last scanner or there's a small number of possible locations, scan the nearest
-            int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetPathLength(id1, currentLocation) < gcr.GetPathLength(id2, currentLocation) ? id1 : id2);
+            int closestTarget = possibleLocationsList.Aggregate((id1, id2) => gcr.GetNodeDist(id1, currentLocation) < gcr.GetNodeDist(id2, currentLocation) ? id1 : id2);
             if(debugLogging)
             {
                 Debug.Log($"Closest potential target found: node id {closestTarget}");
@@ -75,18 +76,18 @@ public class UnifiedScan : BotTemplate
                     }
                 }
                 bool markAsMin = false;
-                double sd = gcr.ScanStandardDeviation(possibleLocationsList.Count <= 0 ? allNodes : possibleLocationsList.ToArray() ,nodeID);
-                if (Abs(sd - min) < 0.1 && Random.value >= 0.5)
+                double variance = gcr.ScanVariance(possibleLocationsList.Count <= 0 ? allNodes : possibleLocationsList.ToArray() ,nodeID);
+                if (Abs(variance - min) < 0.1 && Random.value >= 0.5)
                 {
                     markAsMin = true;
                 }
-                else if (sd < min)
+                else if (variance < min)
                 {
                     markAsMin = true;
                 }
                 if (markAsMin)
                 {
-                    min = sd;
+                    min = variance;
                     minNode = nodeID;
                 }           
             }
@@ -159,11 +160,7 @@ public class UnifiedScan : BotTemplate
                 IncrementMoodOthers(true, true);
                 IncrementMoodOthers(false, false);
             }
-            /*IncrementMood((postPossibleLocsCount <= initialPossibleLocsCount ? 1 : -1) * selfMoodFactor);
-            IncrementMoodOthers(true, postPossibleLocsCount <= initialPossibleLocsCount);
-            IncrementMoodOthers(false, postPossibleLocsCount > initialPossibleLocsCount);*/
-          
-            Vector3 offset = new(0,0.55f,0);
+            /*Vector3 offset = new(0,0.55f,0);
             foreach (int location in possibleLocsList)
             {
                 DistanceTextPopup textPopup = Instantiate(gcr.textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
@@ -192,7 +189,7 @@ public class UnifiedScan : BotTemplate
             }
             else
             {
-                int[] detourPath = gcr.GetCappedPath(currentLocation, specActionTarget, 3);
+                int[] detourPath = gcr.GetCappedPath(currentLocation, specActionTarget, playerID, 3);
                 if (detourPath.Length > 1)
                 {
                     int detourPathTarget = detourPath[1];
@@ -239,8 +236,9 @@ public class UnifiedScan : BotTemplate
         GameController gcr = GameController.gameController;
         int mapSizeSq = GameController.gameController.mapSize * GameController.gameController.mapSize;
         //Initial setup: only do this when directly following hidden turn
-        if (gcr.shouldUpdateScannerKnowledge){
-            gcr.shouldUpdateScannerKnowledge = false;
+        if (gcr.shouldUpdateScannerKnowledge && gcr.GetTurnNumber() != lastUpdatedScannerKnowledge){
+            lastUpdatedScannerKnowledge = gcr.GetTurnNumber();
+            
             // Reset this dict when a new round starts
             if (gcr.turnCount == 1 || UnifiedScan.possibleLocations.Count == 0)
             {

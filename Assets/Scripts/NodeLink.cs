@@ -22,10 +22,13 @@ public class NodeLink
     {
         return (nodeA == nodeID || nodeB == nodeID); 
     }
-    
+    public string GetLinkString()
+    {
+        return "Between nodes " + nodeA.ToString() + " and " + nodeB.ToString();
+    }
     public override string ToString()
     {
-      return base.ToString() + ", Link between" + nodeA.ToString() + " and " + nodeB.ToString();
+      return base.ToString() + ", Link between " + nodeA.ToString() + " and " + nodeB.ToString();
     }
     public int? getOtherNode(int startNode)
     {

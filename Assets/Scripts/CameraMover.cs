@@ -34,6 +34,10 @@ public class CameraMover : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        if (GameController.gameController.autoProgressTurn)
+        {
+            return;
+        }
         if (followTarget != null)
         {
             transform.position = followTarget.transform.position + new Vector3(0,16.5f,0);

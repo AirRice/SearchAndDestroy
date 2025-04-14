@@ -24,6 +24,11 @@ public class PlayerPiece : MonoBehaviour
 
     }
 
+    public void SetPlayerMarker(bool set)
+    {
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        sr.enabled = set;
+    }
     public void SetHidden(bool hidden)
     {
         if(!hidden)

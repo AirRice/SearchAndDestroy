@@ -17,6 +17,7 @@ public abstract class BotTemplate : ScriptableObject
     protected List<PlayerAction> actionLog = new();
     protected float currentMood = 0;
     protected float prevMood = 0;
+    public float turn_delay = 0.0f;
     public float selfMoodFactor = 0.15f; // How much self-actions affect mood
     public float friendMoodFactor = 0.1f; // How much ally actions affect mood
     public float enemyMoodFactor = 0.3f; // How much enemy actions affect mood
@@ -43,7 +44,8 @@ public abstract class BotTemplate : ScriptableObject
     }
     public void IncrementMood(float val)
     {
-        Debug.Log($"Player {playerID}'s mood incremented by {val}");
+        if (debugLogging)
+            Debug.Log($"Player {playerID}'s mood incremented by {val}");
         currentMood += val;
     }
     public void IncrementMoodOthers(bool allies, bool positive)
@@ -81,7 +83,7 @@ public abstract class BotTemplate : ScriptableObject
         {
             HandleAction(playerID, actionsLeft);
             int specActionTarget = GetSpecialActionTarget();
-            if(isHiddenBot && gcr.GetPathLength(currentLocation,specActionTarget) == 1)
+            if(isHiddenBot && gcr.GetNodeDist(currentLocation,specActionTarget) == 1)
             {
                 if(debugLogging)
                 {
@@ -91,7 +93,7 @@ public abstract class BotTemplate : ScriptableObject
                     break;
                 }
                 OnSpecialAction(specActionTarget);
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(turn_delay);
                 continue;
             }
             else if (!isHiddenBot && currentLocation == specActionTarget)
@@ -104,7 +106,7 @@ public abstract class BotTemplate : ScriptableObject
                     break;
                 }
                 OnSpecialAction(specActionTarget);
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(turn_delay);
                 continue;
             }
             int moveTarget = GetMovementTarget(specActionTarget);
@@ -120,14 +122,17 @@ public abstract class BotTemplate : ScriptableObject
                 OnMove(moveTarget);
                 actionLog.Add(new PlayerAction(0, prevLocation, new int[] {moveTarget}));
                 if ((playerID == 0 && gcr.localPlayerID == 0) || (playerID != 0))
-                    yield return new WaitForSeconds(0.5f);
+                    yield return new WaitForSeconds(turn_delay);
             }
         }
         OnPlayerTurnEnd();
-        gcr.GenerateStatusString(playerID, GetActionLog(), personality);
         if (gcr.autoProgressTurn)
         {
             gcr.ProgressTurn();
+        }
+        else
+        {
+            gcr.GenerateStatusString(playerID, GetActionLog(), personality);
         }
     }
     protected virtual void OnPlayerTurnEnd()
@@ -222,7 +227,8 @@ public abstract class BotTemplate : ScriptableObject
     public string GetCurrentEmotion()
     {
         GameController gcr = GameController.gameController;
-        Debug.Log($"Player {playerID} current mood: {currentMood} prev mood: {prevMood}");
+        if (debugLogging)
+            Debug.Log($"Player {playerID} current mood: {currentMood} prev mood: {prevMood}");
         float othersMood = gcr.GetOthersAvgMood(playerID == 0 ? 0 : 1);
         if (Random.value > useAltMoodsFactor)
         {

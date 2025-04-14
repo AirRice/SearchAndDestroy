@@ -56,8 +56,11 @@ public class GameController : MonoBehaviour
     protected int[] hunterPlayerLocations;
     public List<NodeLink> nodeLinksList = new();
     public List<(int,int[])> scanHistory;
-    //Scan History is (node id, distance to hidden player)
+    //Scan History is (node id, adjacent nodes shown array)
     private Dictionary<(int,int), int[]> cachedPaths = new();
+    //If an entry in the above dict is not valid for whatever reason we'll store alternate paths in the below tuple list
+     private List<(int,int,int[])> cachedAltPaths;
+    private Dictionary<int[], int[]>[] cachedDestsAdjs;
     private bool nodeWasInfectedLastTurn = false;
     public List<string> chatHistory = new();
     public List<int> chattedCurrentTurn;
@@ -97,7 +100,6 @@ public class GameController : MonoBehaviour
         useSmoothMove = cfg.useSmoothMove;
         autoProgressTurn = cfg.autoProcessTurn;
         playerBotType = cfg.playerBotType;
-        
         StartGame();
     }
 
@@ -118,10 +120,13 @@ public class GameController : MonoBehaviour
     {
         return localPlayerID==0 ? hiddenPlayerPiece : playerPiecesList[localPlayerID-1];
     }
-
     //Handling on-start variables, etc. Needed as game can restart.
     public void StartGame(bool restart = false)
     {
+        if(restart){
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            return;
+        }
         //Reset all variables
         noBotPlayers = true;
         gameEnded = false;
@@ -140,22 +145,13 @@ public class GameController : MonoBehaviour
         hunterPlayerLocations = null;
         nodeLinksList = new List<NodeLink>();
         targetNodeIDs = new List<int>();
-        cachedPaths = new Dictionary<(int,int), int[]>();
+        cachedPaths = new();
+        cachedAltPaths = new();
         nodeWasInfectedLastTurn = false;
-        FileLogger.mainInstance.IncrementRound();
         chatHistory.Clear();
-        
-        if(restart){
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        }
+
         this.SetupBoard();
         this.SetupBotPlayers();
-
-        if (logToCSV)
-        {
-            // Log the selected objectives using action 2
-            FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
-        }
         // Find marked spawns for each team
         try
         {
@@ -186,7 +182,10 @@ public class GameController : MonoBehaviour
             hiddenPlayer.SetHidden(true);
             hiddenPlayer.setNode(hiddenPlayerLocation,false);
         }
-        gameHud.ShowCentreMessage(hiddenwin ? trojanWinMessage : scannerWinMessage);
+        if(!autoProgressTurn)
+        {
+            gameHud.ShowCentreMessage(hiddenwin ? trojanWinMessage : scannerWinMessage);
+        }
         gameHud.ResetPlayerActionButton();
         gameEnded = true;
 
@@ -205,8 +204,9 @@ public class GameController : MonoBehaviour
     IEnumerator WaitToRestart()
     {
         //Wait for 1 second
-        yield return new WaitForSeconds(0.25f);
+        yield return new WaitForSeconds(0.001f);
 
+        FileLogger.mainInstance.IncrementRound();
         if (FileLogger.mainInstance.GetCurrentRoundCount() < maxRoundCount)
         {
             Debug.Log($"Starting Round {FileLogger.mainInstance.GetCurrentRoundCount()} of {maxRoundCount}");
@@ -241,20 +241,23 @@ public class GameController : MonoBehaviour
     public static readonly List<BotProfile> BotProfiles = new()
     {
         new BotProfile("Human", -1, -1f, GenerationType.ContextEmotion, ""),
-        new BotProfile("ClosestScanner", 1, 0f, GenerationType.ContextEmotion, "Greedy, Shortsighted"),
-        new BotProfile("MiddleSplitScanner", 1, 1f, GenerationType.ContextEmotion, "Cautious, Calculated"),
+        new BotProfile("ClosestScanner", 1, 0f, GenerationType.ContextEmotion, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScanner", 1, 1f, GenerationType.ContextEmotion, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScanner", 1, 0f, GenerationType.ContextEmotion, "Egotistical, Loner"),
         new BotProfile("GreedyTrojan", 0, 0f, GenerationType.ContextEmotion, "Greedy, Cocky"),
-        new BotProfile("CautiousTrojan", 0, 1f, GenerationType.ContextEmotion, "Cautious, Sneaky"),
+        new BotProfile("CautiousTrojan", 0, 1f, GenerationType.ContextEmotion, "Cautious, Calculating, Guarded"),
 
-        new BotProfile("ClosestScannerE", 1, 0f, GenerationType.EmotionOnly, "Greedy, Shortsighted"),
-        new BotProfile("MiddleSplitScannerE", 1, 1f, GenerationType.EmotionOnly, "Cautious, Calculated"),
+        new BotProfile("ClosestScannerE", 1, 0f, GenerationType.EmotionOnly, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScannerE", 1, 1f, GenerationType.EmotionOnly, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScannerE", 1, 0f, GenerationType.EmotionOnly, "Egotistical, Loner"),
         new BotProfile("GreedyTrojanE", 0, 0f, GenerationType.EmotionOnly, "Greedy, Cocky"),
-        new BotProfile("CautiousTrojanE", 0, 1f, GenerationType.EmotionOnly, "Cautious, Sneaky"),
+        new BotProfile("CautiousTrojanE", 0, 1f, GenerationType.EmotionOnly, "Cautious, Calculating, Guarded"),
 
-        new BotProfile("ClosestScannerC", 1, 0f, GenerationType.ContextOnly, "Greedy, Shortsighted"),
-        new BotProfile("MiddleSplitScannerC", 1, 1f, GenerationType.ContextOnly, "Cautious, Calculated"),
+        new BotProfile("ClosestScannerC", 1, 0f, GenerationType.ContextOnly, "Greedy, Impatient"),
+        new BotProfile("MiddleSplitScannerC", 1, 1f, GenerationType.ContextOnly, "Cautious, Deliberate, Strategic"),
+        new BotProfile("SoloScannerC", 1, 0f, GenerationType.ContextOnly, "Egotistical, Loner"),
         new BotProfile("GreedyTrojanC", 0, 0f, GenerationType.ContextOnly, "Greedy, Cocky"),
-        new BotProfile("CautiousTrojanC", 0, 1f, GenerationType.ContextOnly, "Cautious, Sneaky"),
+        new BotProfile("CautiousTrojanC", 0, 1f, GenerationType.ContextOnly, "Cautious, Calculating, Guarded"),
     };
 
     // Sets up the AI agents depending on the file-specified bot templates.
@@ -357,15 +360,16 @@ public class GameController : MonoBehaviour
     private readonly int generateObjsTries = 1000;
     void SetupBoard()
     {   
-        // load file for setting the board up. Format: each rank of the board (in number of nodes)
         float totalHorizLength = (mapSize * 2 - 2) * nodeHorizDist;
         int currentNodeID = 1;
+        cachedDestsAdjs = new Dictionary<int[], int[]>[mapSize*mapSize];
         for ( int i=0; i < mapSize ; i++ )
         {
             for ( int j=0; j < mapSize; j++ )
             {
                 float zLoc = (totalHorizLength/2) - nodeHorizDist * (i+j);
                 float xLoc = nodeVertDist/2*(j-i);
+                cachedDestsAdjs[currentNodeID-1] = new();
                 Node newNode = Instantiate(nodePrefab, new Vector3(xLoc, 0, zLoc), Quaternion.identity);
                 newNode.nodeID = currentNodeID;
                 newNode.gameObject.name = "Node"+currentNodeID;
@@ -409,6 +413,11 @@ public class GameController : MonoBehaviour
 
             int oppositeChosenTarget = mapSize*mapSize-(randomChosenTarget-1);
             AddTargetNodeID(oppositeChosenTarget);
+        }
+        if (logToCSV)
+        {
+            // Log the selected objectives using action 2
+            FileLogger.mainInstance.WriteLineToLog($"||2||{string.Join(",", targetNodeIDs)}");
         }
         gameHud.UpdateObjectivesData(maxObjectives*2, 0);
         mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
@@ -469,7 +478,7 @@ public class GameController : MonoBehaviour
     // returns the int we ended up at
     public int TryMoveToNode(int toMoveTo)
     {
-        int[] movePath = GetCappedPath(GetActivePlayerPosition(), toMoveTo, currentPlayerMoves);
+        int[] movePath = GetCappedPath(GetActivePlayerPosition(), toMoveTo, localPlayerID, currentPlayerMoves);
         if(movePath.Length <= 0)
         {
             return -1;
@@ -574,7 +583,7 @@ public class GameController : MonoBehaviour
         {
             float objsRatio = (float)infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length/maxObjectives;
             IncrementMoodMultiple(currentTurnPlayer, false, false, objsRatio* 0.9f + 0.1f);
-            gameHud.UpdateObjectivesData(maxObjectives, infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length);
+            gameHud.UpdateObjectivesData(maxObjectives*2, infectedNodeIDs.Intersect(targetNodeIDs).ToArray().Length);
             if (localPlayerID != 0)
             {
                 mainCam.transform.position = toInfect.transform.position + new Vector3(0,16.5f,0);
@@ -630,14 +639,14 @@ public class GameController : MonoBehaviour
             FileLogger.mainInstance.WriteLineToLog($"{GetTurnNumber()}|{currentTurnPlayer}|1|{GetActivePlayerPosition()}|{string.Join(',', closestNodes)}");
         }
         scanHistory.Add((toTrack.nodeID, closestNodes.ToArray()));
-        Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
+        //Debug.Log($"Trojan player is in direction of node(s) {string.Join(" and ", closestNodes)}");
         return false;
     }
     public List<int> GetClosestAdjToDest(int sourceID, int destID)
     {
         List<int> closestNodes = new();
         int[] adjs = GetAdjacentNodes(sourceID);
-        int[] adjsDist = adjs.Select(id=> GetPathLength(id, destID)).ToArray();
+        int[] adjsDist = adjs.Select(id=> GetNodeDist(id, destID)).ToArray();
         int minDist = adjsDist.Min();
 
         for(int i = 0; i<adjs.Length; i++){
@@ -651,7 +660,7 @@ public class GameController : MonoBehaviour
 
     public string GetTargetDirectionString(int sourceID, int[] destIDs)
     {
-        Debug.Log(sourceID + " to nodes " + string.Join("," , destIDs));
+        //Debug.Log(sourceID + " to nodes " + string.Join("," , destIDs));
         // Direction is calculated as numpad notation; get avg for compound directions.
         Dictionary<int, string> _numpadDirs = new()
         {
@@ -673,12 +682,10 @@ public class GameController : MonoBehaviour
                 if(Math.Abs(sourceID - destID) == 1)
                 {
                     dirs += sourceID > destID ? 1 : 9;
-                    Debug.Log(dirs);
                 }
                 else if(sourceID != destID && Math.Abs(sourceID - destID) % mapSize == 0)
                 {
                     dirs += sourceID > destID ? 7 : 3;
-                    Debug.Log(dirs);
                 }
             }
         }
@@ -688,24 +695,34 @@ public class GameController : MonoBehaviour
     public List<int> GetDestsClosestToAdjs(int sourceID, int[] selectedAdjs)
     {
         int[] adjs = GetAdjacentNodes(sourceID);
-        if (selectedAdjs.Length > 2 || selectedAdjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
+        if (!(sourceID >= 0 && sourceID < cachedDestsAdjs.Length) || selectedAdjs.Length > 2 || selectedAdjs.Length < 0 || adjs.Intersect(selectedAdjs).ToArray().Length <= 0)
         {
+            // If sourceID out of scope or selectedAdjs is invalid from sourceID, return empty list (error).
             return new List<int>();
         }
         List<int> possibleNodes = new();
-        for(int i = 1; i <= mapSize*mapSize; i++)
+        if (cachedDestsAdjs[sourceID-1].TryGetValue(selectedAdjs, out int[] foundList))
         {
-            if (i == sourceID)
+            // If cached version of the nodes that would give scan result selectedAdjs from sourceID exists, just return it
+           possibleNodes = foundList.ToList();
+        }
+        else
+        {
+            for(int i = 1; i <= mapSize*mapSize; i++)
             {
-                continue;
+                if (i == sourceID)
+                {
+                    continue;
+                }
+                int minDist = adjs.Select(id => GetNodeDist(id, i)).Min();
+                int[] closestAdjs = adjs.Where(adj => GetNodeDist(adj, i) == minDist).ToArray();
+                //Debug.Log($"Node {i} closest to adjs {string.Join(", ", closestAdjs)}");
+                if(closestAdjs.SequenceEqual(selectedAdjs))
+                {
+                    possibleNodes.Add(i);
+                }
             }
-            int minDist = adjs.Select(id => GetPathLength(id, i)).Min();
-            int[] closestAdjs = adjs.Where(adj => GetPathLength(adj, i) == minDist).ToArray();
-            //Debug.Log($"Node {i} closest to adjs {string.Join(", ", closestAdjs)}");
-            if(closestAdjs.SequenceEqual(selectedAdjs))
-            {
-                possibleNodes.Add(i);
-            }
+            cachedDestsAdjs[sourceID-1].Add(selectedAdjs,possibleNodes.ToArray());
         }
         return possibleNodes;
     }
@@ -753,29 +770,22 @@ public class GameController : MonoBehaviour
         {
             //return;    
         }
+        
         if(increment)
         {
             turnCount++;
             currentTurnPlayer++;
             currentTurnPlayer %= this.playersCount;
-            mainCam.GetComponent<CameraMover>().ClearFollowTarget();
             if(this.hotSeatMode)
             {
                 localPlayerID = currentTurnPlayer;
-            }
-            if (currentTurnPlayer == localPlayerID)
-            {
-                mainCam.transform.position = new Vector3(0,12.5f+2.5f*(mapSize-3),0);
-            }
-            else
-            {
-                mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
             }
             if(GetTurnNumber()>maxTurnCount)
             {
                 EndGame(false);
             }
         }
+
         gameHud.ResetPlayerActionButton();
         currentPlayerMoves = movesCount;
         currentPlayerDidSpecialAction = false;
@@ -783,7 +793,7 @@ public class GameController : MonoBehaviour
         // If flag is marked then re-cache the paths, they'll be inaccurate now.
         if(nodeWasInfectedLastTurn)
         {
-            cachedPaths = new Dictionary<(int,int), int[]>();
+            //cachedPaths = new Dictionary<(int,int), int[]>();
             nodeWasInfectedLastTurn = false;
         }
 
@@ -808,10 +818,38 @@ public class GameController : MonoBehaviour
             }       
             this.StartHiddenTurn();
         }
-        else if(localPlayerID != 0)
+        else 
         {
-            if(hiddenPlayerPiece != null)
-                Destroy(hiddenPlayerPiece.gameObject);
+            if(localPlayerID != 0)
+            {
+                if(hiddenPlayerPiece != null)
+                    Destroy(hiddenPlayerPiece.gameObject);
+                
+            }
+            if(currentTurnPlayer == playersCount-1)
+            {
+                shouldUpdateScannerKnowledge = false;
+            }
+        }
+        foreach (PlayerPiece pp in playerPiecesList){
+            pp.SetPlayerMarker(false);
+        }
+        if(hiddenPlayerPiece != null)
+        {
+            hiddenPlayerPiece.SetPlayerMarker(false);
+        }
+        mainCam.GetComponent<CameraMover>().ClearFollowTarget();
+        if (currentTurnPlayer == localPlayerID)
+        {
+            PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
+            mainCam.transform.position = localPlayerPiece.gameObject.transform.position + new Vector3(0,12.5f,0);
+            if(localPlayerPiece != null) {
+                localPlayerPiece.SetPlayerMarker(true);
+            }
+        }
+        else
+        {
+            mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
         }
         if(playerBotControllers[currentTurnPlayer] != null)
         {
@@ -855,15 +893,15 @@ public class GameController : MonoBehaviour
     public void GenerateStatusString(int player, string actionLog = null, string personalityParams = null)
     {
         int turn = GetTurnNumber();
-        GenerationType genType = playerBotControllers[currentTurnPlayer].GetGenerationType();
+        GenerationType genType = playerBotControllers[player].GetGenerationType();
         bool genContextOnly = genType == GenerationType.ContextOnly;
         if(genType == GenerationType.EmotionOnly)
         {
-            string emotion = playerBotControllers[currentTurnPlayer].GetCurrentEmotion();
-            string message = playerBotControllers[currentTurnPlayer].GetRandomBark();
+            string emotion = playerBotControllers[player].GetCurrentEmotion();
+            string message = playerBotControllers[player].GetRandomBark();
             string responseFormatted = ChatFormat(message);
             chatHistory.Add($"Player {player}: " + responseFormatted);
-            gameHud.PlayerDialogue(currentTurnPlayer, emotion, responseFormatted);
+            gameHud.PlayerDialogue(player, emotion, responseFormatted);
 
         }
         else
@@ -921,11 +959,11 @@ public class GameController : MonoBehaviour
 
             string responseFormatting = "\nRESPONSE FORMAT:\n {\"player\": int <PLAYER NUMBER>, \"emotion\": \"string <EMOTION>\",\"message\": \"string <GENERATED MESSAGE>\"}\n";
     
-            string inputText = gameDefinition + gameState + playerInfoString + actionLog + extraInfoString + prevChat + instruction + responseFormatting;
+            string inputText = gameDefinition + playerInfoString + gameState + extraInfoString + actionLog +  prevChat + instruction + responseFormatting;
             chattedCurrentTurn.Add(player);
             Debug.Log(inputText);
-            HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
-            //GroqAPIHandler.TextGeneration(inputText, OnAPIResult, OnAPIError);
+            //HuggingFaceAPI.TextGeneration(inputText, OnAPIResult, OnAPIError);
+            GroqAPIHandler.TextGeneration(inputText, OnAPIResult, OnAPIError);
         }
     }
 
@@ -969,7 +1007,7 @@ public class GameController : MonoBehaviour
             {
                 if(gameHud.playerActionButtonDown)
                     return;
-                int[] highlightedPath = GetCappedPath(localPlayerPiece.currentNodeID, thisNode.nodeID, currentPlayerMoves);
+                int[] highlightedPath = GetCappedPath(localPlayerPiece.currentNodeID, thisNode.nodeID, localPlayerID, currentPlayerMoves);
                 int moveSpend = (movesCount-currentPlayerMoves)+highlightedPath.Length - 1;
                 TryPathHighlight(highlightedPath, true);
                 if(currentPlayerMoves>0)
@@ -1070,14 +1108,42 @@ public class GameController : MonoBehaviour
         }
     }
     
-    public int[] GetCappedPath(int startPointID, int endPointID, int maxhops = -1)
+    public int[] GetCappedPath(int startPointID, int endPointID, int playerID, int maxhops = -1)
     {
+
         if (!cachedPaths.TryGetValue((startPointID, endPointID), out int[] foundPathRaw))
         {
-            foundPathRaw = this.SearchPath(startPointID, endPointID);
-            if (infectedNodeIDs.Intersect(foundPathRaw).ToArray().Count() <= 0)
+            // First ever time caching this; so just get the shortest path with no detours
+            foundPathRaw = this.SearchPath(startPointID, endPointID, new List<int>());
+            cachedPaths.Add((startPointID, endPointID), foundPathRaw);
+        }
+        // Define the list of nodes that need to be avoided
+        List<int> toAvoid = new();
+        //Calculate it...
+        if (playerID != 0)
+        {
+            toAvoid.AddRange(infectedNodeIDs);
+        }
+        //If the obtained path is wrong then try and get one.
+        if (toAvoid.Intersect(foundPathRaw).ToArray().Length <= 0)
+        {
+            bool found = false;
+            int i = 0;
+            while(found == false && cachedAltPaths.Count > i)
             {
-                cachedPaths.Add((startPointID, endPointID), foundPathRaw);
+                if(cachedAltPaths[i].Item1 == startPointID && cachedAltPaths[i].Item2 == endPointID)
+                {
+                    if (toAvoid.Intersect(cachedAltPaths[i].Item3).ToArray().Length <= 0)
+                    {
+                        foundPathRaw = cachedAltPaths[i].Item3;
+                        found = true;
+                    }
+                }
+                i++;
+            }
+            if (!found){
+                foundPathRaw = this.SearchPath(startPointID, endPointID, toAvoid);
+                cachedAltPaths.Add((startPointID, endPointID, foundPathRaw));
             }
         }
         if (maxhops == -1 || foundPathRaw.Length <= maxhops+1)
@@ -1086,11 +1152,11 @@ public class GameController : MonoBehaviour
             return foundPathRaw.Take(maxhops+1).ToArray();
     }
 
-    public int[] SearchPath(int startPointID, int endPointID)
+    public int[] SearchPath(int startPointID, int endPointID, List<int> toAvoid)
     //Tried implementing BFS, unsure if the most robust or fast
     //Adapted from python implementation https://stackoverflow.com/questions/8922060/how-to-trace-the-path-in-a-breadth-first-search/50575971#50575971
     {
-        int maxDepth = 20;
+        int maxDepth = 40;
         //Edge case: same node for start & end
         if (startPointID == endPointID)
             return new int[] {endPointID};
@@ -1107,7 +1173,7 @@ public class GameController : MonoBehaviour
             foreach(NodeLink link in nodeLinksList)
             {
                 int? otherNode = link.getOtherNode(vpath.Item1);
-                if(otherNode.HasValue && infectedNodeIDs.Contains(otherNode.Value) && localPlayerID != 0)
+                if(otherNode.HasValue && toAvoid.Contains(otherNode.Value))
                     continue;
                 if(otherNode == endPointID)
                     return vpath.Item2.Concat(new int[] {endPointID}).ToArray();
@@ -1126,12 +1192,28 @@ public class GameController : MonoBehaviour
         }
         return new int[0];
     }
-    public int GetPathLength(int startPointID, int endPointID)
+    public int GetPathLength(int startPointID, int endPointID, int playerID = -1)
     {
-        int[] pathTo = GetCappedPath(startPointID,endPointID);
+        if (playerID == -1)
+        {
+            playerID = currentTurnPlayer;
+        }
+        int[] pathTo = GetCappedPath(startPointID, endPointID, playerID);
         //Debug.Log($"{string.Join(",", pathTo)}");
         int dist = pathTo.Length-1;
         return dist;
+    }
+    public int GetNodeDist(int startPointID, int endPointID)
+    {
+        if(NodeIsValid(startPointID) && NodeIsValid(endPointID))
+        {
+            // Convert NodeID into coordinates and get manhattan distance
+            int y1 = Math.DivRem(startPointID-1, mapSize, out int x1);
+            int y2 = Math.DivRem(endPointID-1, mapSize, out int x2);
+            //Debug.Log($"Nodes {startPointID} and {endPointID} : coords ({x1},{y1}) and ({x2},{y2})");
+            return Math.Abs(x1-x2) + Math.Abs(y1-y2);
+        }
+        return -1;
     }
     public int[] GetHunterPos()
     {
@@ -1144,7 +1226,7 @@ public class GameController : MonoBehaviour
             return 0;
         for (int i=0; i<playersCount-1; i++)
         {
-            sum += GetPathLength(nodeID,hunterPlayerLocations[i]);
+            sum += GetNodeDist(nodeID,hunterPlayerLocations[i]);
         }
         return sum/(playersCount-1);
     }
@@ -1155,7 +1237,7 @@ public class GameController : MonoBehaviour
         {
             if(ignoreInfected && infectedNodeIDs.Contains(targetPos))
                 continue;
-            int targetdist = GetPathLength(nodeID,targetPos);
+            int targetdist = GetNodeDist(nodeID,targetPos);
             if (targetdist < min)
             {
                 min = targetdist;
@@ -1164,7 +1246,7 @@ public class GameController : MonoBehaviour
         return min;
     }
 
-    public double ScanStandardDeviation(int[] nodesToAssess, int scanPos)
+    public double ScanVariance(int[] nodesToAssess, int scanPos)
     {
         Dictionary<String, int> eachDirNodes = new();
         foreach (int nodeID in nodesToAssess)
@@ -1183,7 +1265,7 @@ public class GameController : MonoBehaviour
         {
             int[] values = eachDirNodes.Values.ToArray();
             double avg = values.Average();
-            return Math.Sqrt(values.Average(v=>Math.Pow(v-avg,2)));
+            return values.Average(v=>Math.Pow(v-avg,2));
         }
         return -1;
     }
