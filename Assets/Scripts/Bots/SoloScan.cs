@@ -23,9 +23,37 @@ public class SoloScan : BotTemplate
             List<int> nodesTowards = gcr.GetClosestAdjToDest(currentLocation,specActionTarget);
             int rand_index = Random.Range(0, nodesTowards.Count);
             int potential_target = nodesTowards[rand_index];
-            if (debugLogging)
-                Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
-            return potential_target;
+            if (!gcr.infectedNodeIDs.Contains(potential_target))
+            {
+                if(debugLogging)
+                {
+                    Debug.Log($"target node to scan is {specActionTarget}, heading to node {potential_target}");
+                }
+                return potential_target;
+            }
+            else
+            {
+                int[] detourPath = gcr.GetCappedPath(currentLocation, specActionTarget, playerID, 3);
+                if (detourPath.Length > 1)
+                {
+                    int detourPathTarget = detourPath[1];
+                    if(debugLogging)
+                    {
+                        Debug.Log($"target node to scan is {specActionTarget}, heading to node {detourPathTarget}");
+                    }
+                    return detourPathTarget;
+                }
+                else
+                {
+                    // The pathfinding failed, somehow
+                    int toMoveTo = SelectNextNodeRandom(currentLocation);
+                    if(debugLogging)
+                    {
+                        Debug.Log($"Moving to node id {toMoveTo} randomly");
+                    }
+                    return toMoveTo;
+                }
+            }
         }
         else
         {

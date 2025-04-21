@@ -1125,7 +1125,7 @@ public class GameController : MonoBehaviour
             toAvoid.AddRange(infectedNodeIDs);
         }
         //If the obtained path is wrong then try and get one.
-        if (toAvoid.Intersect(foundPathRaw).ToArray().Length <= 0)
+        if (toAvoid.Intersect(foundPathRaw).ToArray().Length > 0)
         {
             bool found = false;
             int i = 0;

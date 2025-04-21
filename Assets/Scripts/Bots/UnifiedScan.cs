@@ -167,7 +167,7 @@ public class UnifiedScan : BotTemplate
                 textPopup.transform.position = Node.GetNode(location).transform.position + offset;
                 textPopup.SetText(location.ToString(), gcr.mainCam);
                 textPopup.SetColor(Color.red);
-            }
+            }*/
         }
     }
 
@@ -195,7 +195,7 @@ public class UnifiedScan : BotTemplate
                     int detourPathTarget = detourPath[1];
                     if(debugLogging)
                     {
-                        Debug.Log($"target node to scan is {specActionTarget}, heading to node {detourPathTarget}");
+                        Debug.Log($"target node to scan is {specActionTarget}, which has infected node in the way: heading to node {detourPathTarget}");
                     }
                     return detourPathTarget;
                 }
