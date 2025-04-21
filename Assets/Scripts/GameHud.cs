@@ -22,6 +22,7 @@ public class GameHud : MonoBehaviour
     private bool lastPlayerActionButtonDown;
     private float lastDisplayedCentreMessage;
     private VisualElement emotionImage;
+    private int imagecounter = 0;
     private void OnEnable()
     {
         VisualElement root = GetComponent<UIDocument>().rootVisualElement;
@@ -51,6 +52,8 @@ public class GameHud : MonoBehaviour
 
     private void EndTurnOnClicked(ClickEvent evt)
     {
+        ScreenCapture.CaptureScreenshot($"screenshots/{imagecounter:0000}.png");
+        imagecounter++;
         GameController.gameController.ProgressTurn();
     }
     private void PlayerActionOnClicked(ClickEvent evt)

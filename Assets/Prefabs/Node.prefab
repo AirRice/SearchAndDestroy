@@ -113,6 +113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nodeID: 0
   lineHandlerPrefab: {fileID: 1262224276135761066, guid: 63613b0d2e549bd4cb75970f55addcfe, type: 3}
+  lineScanMat: {fileID: 2100000, guid: 23e4ef1b3178a7b41be78339f57a0c55, type: 2}
   lineActiveMat: {fileID: 2100000, guid: d379612467c35d34d9e1e459e9d9ebcf, type: 2}
   lineMat: {fileID: 2100000, guid: cc6bf9d15d8b6af4a9693de915d8aed4, type: 2}
   unselectedMat: {fileID: 2100000, guid: 5d4e1c0751a94b848b10331991829504, type: 2}

@@ -9,6 +9,7 @@ public class Node : MonoBehaviour
     public int nodeID = 0;
     private bool isInfected = false;
     public LineHandler lineHandlerPrefab;
+    public Material lineScanMat;
     public Material lineActiveMat;
     public Material lineMat;
     public Material unselectedMat;
@@ -102,7 +103,7 @@ public class Node : MonoBehaviour
         Vector3[] positions = {gameObject.transform.position,st.gameObject.transform.position};
         LineHandler lineHandler = Instantiate(lineHandlerPrefab,gameObject.transform.position,gameObject.transform.rotation);
         lineHandler.gameObject.transform.parent = this.gameObject.transform;
-        lineHandler.SetupLine(positions,lineMat,lineActiveMat,this,st);
+        lineHandler.SetupLine(positions,lineMat,lineActiveMat,lineScanMat,this,st);
         
         //line.enabled = true;
     }

@@ -517,12 +517,7 @@ public class GameController : MonoBehaviour
             {   
                 int node1 = pathToHovered[i];
                 int node2 = pathToHovered[i+1];
-                //Debug.Log("nodeLine"+node2+"-"+node1);
-                Node lineDestNode = Node.GetNode(node2);
-                GameObject lineDrawer = GameObject.Find("nodeLine" + node1 + "-" + node2) ?? GameObject.Find("nodeLine" + node2 + "-" + node1);
-                if (lineDrawer==null)
-                    break;
-                lineDrawer.GetComponent<LineRenderer> ().material = toHighlight ? lineDestNode.lineActiveMat : lineDestNode.lineMat;
+                HighlightPathBetweenNodes(node1, node2, toHighlight);
             }
         }
     }
@@ -633,6 +628,7 @@ public class GameController : MonoBehaviour
             DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             textPopup.transform.position = Node.GetNode(i).transform.position + offset;
             textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);
+            SetScanPathBetweenNodes(toTrack.nodeID,i);
         }
         if(logToCSV)
         {
@@ -851,6 +847,7 @@ public class GameController : MonoBehaviour
         {
             mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
         }
+        ResetScanPathsVisual(false);
         if(playerBotControllers[currentTurnPlayer] != null)
         {
             //Handle automatic turn
@@ -1105,6 +1102,25 @@ public class GameController : MonoBehaviour
         foreach(GameObject lineDrawer in GameObject.FindGameObjectsWithTag("lineHandler"))
         {
             lineDrawer.GetComponent<LineHandler> ().HighlightPath(highlighted);
+        }
+    }
+    public void HighlightPathBetweenNodes(int node1, int node2, bool toHighlight = true)
+    {
+        GameObject lineDrawer = GameObject.Find("nodeLine" + node1 + "-" + node2) ?? GameObject.Find("nodeLine" + node2 + "-" + node1);
+        if (lineDrawer!=null)
+            lineDrawer.GetComponent<LineHandler> ().HighlightPath(toHighlight);
+    }
+    public void SetScanPathBetweenNodes(int node1, int node2, bool scanState = true)
+    {
+        GameObject lineDrawer = GameObject.Find("nodeLine" + node1 + "-" + node2) ?? GameObject.Find("nodeLine" + node2 + "-" + node1);
+        if (lineDrawer!=null)
+            lineDrawer.GetComponent<LineHandler> ().SetScanState(scanState, node1 < node2);
+    }
+    public void ResetScanPathsVisual(bool scanState = false)
+    {
+        foreach(GameObject lineDrawer in GameObject.FindGameObjectsWithTag("lineHandler"))
+        {
+            lineDrawer.GetComponent<LineHandler> ().SetScanState(scanState);
         }
     }
     
