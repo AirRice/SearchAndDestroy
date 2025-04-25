@@ -54,6 +54,11 @@ public class GameHud : MonoBehaviour
     {
         ScreenCapture.CaptureScreenshot($"screenshots/{imagecounter:0000}.png");
         imagecounter++;
+        StartCoroutine(DelayAndProgressTurn());
+    }
+    IEnumerator DelayAndProgressTurn()
+    {
+        yield return new WaitForSeconds(0.5f);
         GameController.gameController.ProgressTurn();
     }
     private void PlayerActionOnClicked(ClickEvent evt)

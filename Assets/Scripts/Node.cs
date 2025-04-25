@@ -7,8 +7,8 @@ using System;
 public class Node : MonoBehaviour
 {
     public int nodeID = 0;
-    private bool isInfected = false;
     public LineHandler lineHandlerPrefab;
+    public Material lineMovedMat;
     public Material lineScanMat;
     public Material lineActiveMat;
     public Material lineMat;
@@ -16,11 +16,22 @@ public class Node : MonoBehaviour
     public Material infectedMat;
     public Material infectedSelectedMat;
     public Material selectedMat;
+    public Material traversedMat;
+    public Material scannedMat;
     public Material targetMat;
     public Material targetClaimedMat;
+    NodeVisualState curState;
+    NodeVisualState lastVisualState;
     private int lastActivePlayer;
     public bool isTarget;
     private bool currentPlayerIsHidden;
+    public enum NodeVisualState
+    {
+        Default,
+        Traversed,
+        Scanned,
+        Infected
+    }
     public static Node GetNode(int id)
     {
         if (GameController.gameController.nodesDict.TryGetValue(id, out Node nodeObject))
@@ -38,20 +49,11 @@ public class Node : MonoBehaviour
     }
     void Awake()
     {
-        // TODO: this is a patchwork solution for node ID enforcement, fix this later when generating nodes automatically.
-        /*
-        string inferredIDString = Regex.Match(gameObject.name, @"Node(\d+)").Groups[1].Value;
-        if (!string.IsNullOrWhiteSpace(inferredIDString))
-        {
-            Debug.Log(inferredIDString);
-            nodeID = Int32.Parse(inferredIDString);
-        }
-        */
     }
     // Start is called before the first frame update
     void Start()
     {
-        gameObject.GetComponent<MeshRenderer> ().material = unselectedMat;
+        curState = NodeVisualState.Default;
     }
 
     // Update is called once per frame
@@ -62,6 +64,25 @@ public class Node : MonoBehaviour
         {
             lastActivePlayer = currentTurnPlayer;
             currentPlayerIsHidden = (lastActivePlayer == 0);
+        }
+        if (lastVisualState != curState)
+        {
+            lastVisualState = curState;
+            switch(curState)
+            {
+                case NodeVisualState.Default:
+                    gameObject.GetComponent<MeshRenderer> ().material = unselectedMat;
+                    break;
+                case NodeVisualState.Traversed:
+                    gameObject.GetComponent<MeshRenderer> ().material = traversedMat;
+                    break;
+                case NodeVisualState.Scanned:
+                    gameObject.GetComponent<MeshRenderer> ().material = scannedMat;
+                    break;
+                case NodeVisualState.Infected:
+                    gameObject.GetComponent<MeshRenderer> ().material = infectedMat;
+                    break;
+            }
         }
     }
 
@@ -76,20 +97,29 @@ public class Node : MonoBehaviour
     {
         if(!lastMouseOverState)
         {
-            gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedSelectedMat : selectedMat;
-            lastMouseOverState = true;
-            GameController.gameController.OnNodeHovered(this);
+            if(curState == NodeVisualState.Default || curState == NodeVisualState.Infected)
+            {
+                bool isInfected = curState == NodeVisualState.Infected;
+                gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedSelectedMat : selectedMat;
+                lastMouseOverState = true;
+                GameController.gameController.OnNodeHovered(this);
+            }
         }
     }
     void OnMouseExit()
     {
         if(lastMouseOverState)
         {
-            gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedMat : unselectedMat;
-            lastMouseOverState = false;
-            GameController.gameController.OnNodeDehovered(this);
+            if(curState == NodeVisualState.Default || curState == NodeVisualState.Infected)
+            {
+                bool isInfected = curState == NodeVisualState.Infected;
+                gameObject.GetComponent<MeshRenderer> ().material = isInfected ? infectedMat : unselectedMat;
+                lastMouseOverState = false;
+                GameController.gameController.OnNodeDehovered(this);
+            } 
         }
     }
+
     void OnMouseDown(){
         if(GameController.gameController.localPlayerID == GameController.gameController.currentTurnPlayer)
         {
@@ -103,7 +133,7 @@ public class Node : MonoBehaviour
         Vector3[] positions = {gameObject.transform.position,st.gameObject.transform.position};
         LineHandler lineHandler = Instantiate(lineHandlerPrefab,gameObject.transform.position,gameObject.transform.rotation);
         lineHandler.gameObject.transform.parent = this.gameObject.transform;
-        lineHandler.SetupLine(positions,lineMat,lineActiveMat,lineScanMat,this,st);
+        lineHandler.SetupLine(positions,lineMat,lineActiveMat,lineScanMat,lineMovedMat,this,st);
         
         //line.enabled = true;
     }
@@ -111,19 +141,17 @@ public class Node : MonoBehaviour
     public void DeInfect()
     {
         LineRenderer line = gameObject.GetComponent<LineRenderer>();
-        isInfected = false;
-        gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? selectedMat : unselectedMat;
+        curState = NodeVisualState.Default;
         if (isTarget)
         {
-            //line.material = targetMat;
+            line.material = targetMat;
         }
     }
 
     public void Infect()
     {
         LineRenderer line = gameObject.GetComponent<LineRenderer>();
-        isInfected = true;
-        gameObject.GetComponent<MeshRenderer> ().material = lastMouseOverState ? infectedSelectedMat : infectedMat;
+        curState = NodeVisualState.Infected;
         if (isTarget)
         {
             line.material = targetClaimedMat;
@@ -132,6 +160,11 @@ public class Node : MonoBehaviour
 
     public bool IsInfected()
     {
-        return isInfected;
+        return curState == NodeVisualState.Infected;
+    }
+
+    public void SetVisualState(NodeVisualState visState)
+    {
+        curState = visState;
     }
 }

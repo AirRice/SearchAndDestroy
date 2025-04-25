@@ -398,11 +398,10 @@ public class GameController : MonoBehaviour
         double d_mapSize = mapSize;
         for(int i=0;i<maxObjectives;i++)
         {
-            bool chosen = false;
             int randomChosenTarget = -1;
             for(int j = 0; j < generateObjsTries; j++)
             {
-                randomChosenTarget = Random.Range(2, (int)Math.Floor(d_mapSize*d_mapSize/2));
+                randomChosenTarget = Random.Range(2, (int)Math.Floor(d_mapSize*d_mapSize/2)+1);
                 if (!targetNodeIDs.Contains(randomChosenTarget) && !IsAdjacentToTargetNodes(randomChosenTarget))
                 {
                     break;
@@ -494,6 +493,12 @@ public class GameController : MonoBehaviour
             return -1;    
         }        
         currentPlayerMoves -= (movePath.Length-1);
+        if(!(localPlayerID != 0 && currentTurnPlayer == 0))
+        {
+            SetMovedPathBetweenNodes(GetActivePlayerPosition(),toMoveTo);
+            Node.GetNode(GetActivePlayerPosition()).SetVisualState(Node.NodeVisualState.Traversed);
+            Node.GetNode(toMoveTo).SetVisualState(Node.NodeVisualState.Traversed);
+        }
         //Debug.Log(currentPlayerMoves);
         if(logToCSV)
         {
@@ -625,10 +630,11 @@ public class GameController : MonoBehaviour
         Vector3 offset = new(0,0.55f,0);
 
         foreach(int i in closestNodes){
-            DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            /*DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             textPopup.transform.position = Node.GetNode(i).transform.position + offset;
-            textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);
+            textPopup.SetText((i < toTrack.nodeID ? "<-" : "->"), mainCam);*/
             SetScanPathBetweenNodes(toTrack.nodeID,i);
+            Node.GetNode(i).SetVisualState(Node.NodeVisualState.Scanned);
         }
         if(logToCSV)
         {
@@ -769,6 +775,7 @@ public class GameController : MonoBehaviour
         
         if(increment)
         {
+            imagecounter++;
             turnCount++;
             currentTurnPlayer++;
             currentTurnPlayer %= this.playersCount;
@@ -783,6 +790,7 @@ public class GameController : MonoBehaviour
         }
 
         gameHud.ResetPlayerActionButton();
+        ResetAllNodeVisualStates();
         currentPlayerMoves = movesCount;
         currentPlayerDidSpecialAction = false;
 
@@ -834,7 +842,7 @@ public class GameController : MonoBehaviour
         {
             hiddenPlayerPiece.SetPlayerMarker(false);
         }
-        mainCam.GetComponent<CameraMover>().ClearFollowTarget();
+        /*mainCam.GetComponent<CameraMover>().ClearFollowTarget();
         if (currentTurnPlayer == localPlayerID)
         {
             PlayerPiece localPlayerPiece = GetLocalPlayerPiece();
@@ -846,7 +854,7 @@ public class GameController : MonoBehaviour
         else
         {
             mainCam.GetComponent<CameraMover>().SetFollowTarget(GetCurrentPlayerPiece());
-        }
+        }*/
         ResetScanPathsVisual(false);
         if(playerBotControllers[currentTurnPlayer] != null)
         {
@@ -885,8 +893,8 @@ public class GameController : MonoBehaviour
     // STRING BUILDING FOR TEXT GENERATION API
 
     // Prompt tuned for Mistral 7B
-    private readonly string tWinCondition = "The objective of the game is to travel next to each of the given objective nodes to successfully infect them. However, the enemy team can capture you by moving to your location. Your \n";
-    private readonly string sWinCondition = "The objective of the game is to find and purge the single enemy player before they can infect all the objectives. You do not know the exact location of the enemy player, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.\n";
+    private readonly string tWinCondition = "The objective of the game as a Trojan is to travel next to each of the given objective nodes to successfully infect them. However, the Scanners can win by moving to your location and performing a scan on top of you.\n";
+    private readonly string sWinCondition = "The objective of the game as a Scanner is to find and purge the Trojan before they can infect all the objectives. The exact location of the Trojan is not known to Scanners, but you can scan your surroundings to get an estimated heading. You will lose the game if the enemy player successfully infects all the objectives on the map.\n";
     public void GenerateStatusString(int player, string actionLog = null, string personalityParams = null)
     {
         int turn = GetTurnNumber();
@@ -912,7 +920,7 @@ public class GameController : MonoBehaviour
             personalityParams = personalityParams ?? "";
             
             string gameDefinition = $"CONTEXT:\nPlayer {player}, is participating in a session of \"Search and Destroy\", a multiplayer board game. In this game, one player (Player 0) takes on the role of a Trojan virus infecting a computer system trying to access and infect all {targetNodeIDs.Count} objective nodes on the grid. All other players are Scanners trying to deduce the Trojan's location and purge it. The Trojan's precise location is unknown to the Scanners and they can only find out which direction the trojan is relative to themselves when they scan. The Trojan wants to stay hidden and will try not to give away information about their location, and Scanner players will try to work together. Scanner players also don't want to tell the Trojan about their strategy too much. Assume messages are directed at other players rather than simply commenting on the game. Assume players refrain from discussing node numbers in too much depth.";
-            
+
             string gameState = "\nGAME STATE:\nThe players are at nodes:\n";
 
             for(int i = 0; i < playersCount; i++)
@@ -1106,16 +1114,36 @@ public class GameController : MonoBehaviour
     }
     public void HighlightPathBetweenNodes(int node1, int node2, bool toHighlight = true)
     {
-        GameObject lineDrawer = GameObject.Find("nodeLine" + node1 + "-" + node2) ?? GameObject.Find("nodeLine" + node2 + "-" + node1);
+        GameObject lineDrawer = GameObject.Find("nodeLine" + (node1 > node2 ? node1 + "-" + node2 : node2 + "-" + node1));
         if (lineDrawer!=null)
             lineDrawer.GetComponent<LineHandler> ().HighlightPath(toHighlight);
     }
     public void SetScanPathBetweenNodes(int node1, int node2, bool scanState = true)
     {
-        GameObject lineDrawer = GameObject.Find("nodeLine" + node1 + "-" + node2) ?? GameObject.Find("nodeLine" + node2 + "-" + node1);
+        GameObject lineDrawer = GameObject.Find("nodeLine" + (node1 > node2 ? node1 + "-" + node2 : node2 + "-" + node1));
         if (lineDrawer!=null)
             lineDrawer.GetComponent<LineHandler> ().SetScanState(scanState, node1 < node2);
     }
+    public void SetMovedPathBetweenNodes(int node1, int node2, bool movedState = true)
+    {
+        GameObject lineDrawer = GameObject.Find("nodeLine" + (node1 > node2 ? node1 + "-" + node2 : node2 + "-" + node1));
+        if (lineDrawer!=null)
+            lineDrawer.GetComponent<LineHandler> ().SetMovedState(movedState);
+    }
+    
+    public void ResetAllNodeVisualStates()
+    {
+        int[] allNodes = Enumerable.Range(1, mapSize*mapSize+1).ToArray();
+        foreach(int i in allNodes)
+        {
+            Node n = Node.GetNode(i);
+            if (n != null)
+            {
+                n.SetVisualState(Node.NodeVisualState.Default);
+            }
+        }
+    }
+
     public void ResetScanPathsVisual(bool scanState = false)
     {
         foreach(GameObject lineDrawer in GameObject.FindGameObjectsWithTag("lineHandler"))

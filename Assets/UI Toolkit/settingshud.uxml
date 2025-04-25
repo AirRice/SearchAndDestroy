@@ -22,6 +22,7 @@
             <ui:VisualElement style="flex-direction: row; justify-content: space-around; align-items: stretch;">
                 <ui:Button text="Add New" display-tooltip-when-elided="true" name="buttonAddRun" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(45, 45, 45);" />
                 <ui:Button text="Remove" display-tooltip-when-elided="true" name="buttonRemoveRun" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(45, 45, 45);" />
+                <ui:Button text="StressTest" display-tooltip-when-elided="true" name="buttonStressTest" style="width: 30%; left: auto; font-size: 24px; -unity-background-image-tint-color: rgb(255, 255, 255); background-color: rgb(45, 45, 45);" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement style="width: 256px;">

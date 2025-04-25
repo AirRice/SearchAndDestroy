@@ -22,6 +22,7 @@ public class SettingsHud : MonoBehaviour
     private Button buttonStartGame;
     private Button buttonAddRun;
     private Button buttonRemoveRun;
+    private Button buttonStressTest;
     private List<ConfigData> cfgList = new();
     private void OnEnable()
     {
@@ -42,7 +43,7 @@ public class SettingsHud : MonoBehaviour
         buttonStartGame = root.Q<Button>("buttonStartGame");
         buttonAddRun = root.Q<Button>("buttonAddRun");
         buttonRemoveRun = root.Q<Button>("buttonRemoveRun");
-
+        buttonStressTest = root.Q<Button>("buttonStressTest");
         radioButtonGroupSelectRun = root.Q<RadioButtonGroup>("radioGroupSelectRun");
         
         List<string> botProfilesList = new(); 
@@ -67,6 +68,7 @@ public class SettingsHud : MonoBehaviour
         radioButtonGroupSelectRun.RegisterValueChangedCallback(SelectRunOnChanged);
         buttonAddRun.RegisterCallback<ClickEvent>(AddRunOnClicked);
         buttonRemoveRun.RegisterCallback<ClickEvent>(RemoveRunOnClicked);
+        buttonStressTest.RegisterCallback<ClickEvent>(StressTestOnClicked);
         playerCountSlider.RegisterValueChangedCallback(PlayerCountOnChanged);
 
         mapSizeSlider.RegisterValueChangedCallback(OnNormalSliderChanged);
@@ -162,6 +164,29 @@ public class SettingsHud : MonoBehaviour
         radioButtonGroupSelectRun.choices = runs;
         cfgList.RemoveAt(cfgList.Count - 1);
         radioButtonGroupSelectRun.value = radioButtonGroupSelectRun.choices.ToArray().Length-1;
+    }
+    private void StressTestOnClicked(ClickEvent evt){
+        int i = 0;
+        List<ConfigData>cfgList = new();
+        for (int mapsize = 3; mapsize <= 20; mapsize++)
+        {
+            for (int objPairs = 1; objPairs <= mapsize/2; objPairs++)
+            {
+                for(int plCount = 2; plCount <= 5; plCount++)
+                {
+                    List<string> bots = new(){ "GreedyTrojanE"};
+                    for (int j = 0; j < (plCount-1); j++)
+                    {
+                        bots.Add("SoloScannerE");
+                    }
+                    cfgList.Add(new ConfigData(mapsize, plCount, 3, 100, 250, objPairs, 0, true, true, false, true, bots.ToArray()));
+                }
+            }
+        }
+        ConfigDataList cfgDataList = new();
+        cfgDataList.configList = cfgList.ToArray();
+        LoadData.Save(cfgDataList);
+        SceneManager.LoadScene("MainSimulation", LoadSceneMode.Single);
     }
     private void OnNormalSliderChanged(ChangeEvent<int> evt)
     {

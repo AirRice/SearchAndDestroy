@@ -12,17 +12,21 @@ public class LineHandler : MonoBehaviour
     public Material lineMat;
     public Material lineActiveMat;
     public Material lineScanMat;
+    public Material lineMovedMat;
     private Material lineScanMatReversed;
     private bool showingScanState = false;
-    
+    private bool showingMovedState = false;
         
-    public void SetupLine(Vector3[] positions, Material lineMat, Material lineActiveMat, Material lineScanMat, Node node1, Node node2)
+    public void SetupLine(Vector3[] positions, Material lineMat, Material lineActiveMat, Material lineScanMat, Material lineMovedMat, Node node1, Node node2)
     {
         this.lineMat = lineMat;
         this.lineActiveMat = lineActiveMat;
         this.lineScanMat = lineScanMat;
-        lineScanMatReversed = new Material(lineScanMat);
-        lineScanMatReversed.mainTextureScale = new Vector2(-1,1);
+        lineScanMatReversed = new Material(lineScanMat)
+        {
+            mainTextureScale = new Vector2(-1, 1)
+        };
+        this.lineMovedMat = lineMovedMat;
         this.node1 = node1;
         this.node2 = node2;
         gameObject.name = "nodeLine"+node1.nodeID+"-"+node2.nodeID;
@@ -44,7 +48,7 @@ public class LineHandler : MonoBehaviour
     }
     public void HighlightPath(bool highlighted = true)
     {
-        if(showingScanState)
+        if(showingScanState || showingMovedState)
         {
             return;
         }
@@ -56,6 +60,12 @@ public class LineHandler : MonoBehaviour
         showingScanState = scanState;
         LineRenderer line = gameObject.GetComponent<LineRenderer>();
         line.material = scanState ? (reversed ? lineScanMatReversed : lineScanMat) : lineMat;
+    }
+    public void SetMovedState (bool movedState)
+    {
+        showingMovedState = movedState;
+        LineRenderer line = gameObject.GetComponent<LineRenderer>();
+        line.material = movedState ? lineMovedMat : lineMat;
     }
     public static implicit operator LineHandler(GameObject v)
     {
