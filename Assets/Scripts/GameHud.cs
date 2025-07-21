@@ -52,7 +52,7 @@ public class GameHud : MonoBehaviour
 
     private void EndTurnOnClicked(ClickEvent evt)
     {
-        ScreenCapture.CaptureScreenshot($"screenshots/{imagecounter:0000}.png");
+        //ScreenCapture.CaptureScreenshot($"screenshots/{imagecounter:0000}.png");
         imagecounter++;
         StartCoroutine(DelayAndProgressTurn());
     }

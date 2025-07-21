@@ -6,7 +6,7 @@ using UnityEngine;
 public class PlayerPiece : MonoBehaviour
 {
     public int playerID = 0;
-    public Material hunterMat;
+    public Material scannerMat;
     public Material hiddenMat;
     public int currentNodeID = 0;
     private Vector3 offset = new Vector3(0,0.75f,0);
@@ -33,7 +33,7 @@ public class PlayerPiece : MonoBehaviour
     {
         if(!hidden)
         {
-            gameObject.GetComponent<MeshRenderer> ().material = hunterMat;
+            gameObject.GetComponent<MeshRenderer> ().material = scannerMat;
         }
         else
         {

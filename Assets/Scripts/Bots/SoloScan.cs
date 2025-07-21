@@ -172,7 +172,7 @@ public class SoloScan : BotTemplate
                 // Add the hidden player's spawn if it's the first time (first turn expected)
                 for ( int i = 1; i <= mapSizeSq; i++ )
                 {
-                    possibleLocations.Add(i, (i == gcr.hiddenSpawn.nodeID));
+                    possibleLocations.Add(i, (i == gcr.trojanSpawn.nodeID));
                 }
             }
 

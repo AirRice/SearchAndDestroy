@@ -13,12 +13,12 @@ using System.Data.Common;
 public class GameController : MonoBehaviour
 {
     public static GameController gameController;
-    public static int initialSeed = 5887108;
+    public static int initialSeed = -1; //= 5887108;
     private GameHud gameHud;
     public TextAsset playerBotTypesData;
     public int mapSize = 3;
     public int playersCount = 2;
-    //1 player is the hidden player, rest will be hunters
+    //1 player is the trojan player, rest will be scanners
     public int movesCount = 3;
     public int maxTurnCount = 15;
     public int maxRoundCount = 10;
@@ -35,7 +35,7 @@ public class GameController : MonoBehaviour
     private bool noBotPlayers = true;
     public Dictionary<int, Node> nodesDict = new();
     public List<PlayerPiece> playerPiecesList = new();
-    public PlayerPiece hiddenPlayerPiece;
+    public PlayerPiece trojanPlayerPiece;
     public int currentPlayerMoves = 0;
     public bool currentPlayerDidSpecialAction = false;
     public int lastInfectedNode;
@@ -43,7 +43,7 @@ public class GameController : MonoBehaviour
     public List<int> infectedNodeIDs;
     // the Target node(s) to which the hiding player must go and infect.
     public List<int> targetNodeIDs;
-    //The current turn will be, 0 = hidden player, all further players = i+1 in the hunterPlayerLocations array
+    //The current turn will be, 0 = trojan player, all further players = i+1 in the scannerPlayerLocations array
     public int currentTurnPlayer = 0;
     public string[] playerBotType;
     private BotTemplate[] playerBotControllers;
@@ -51,9 +51,9 @@ public class GameController : MonoBehaviour
     public Dictionary<int, BotTemplate> playerBotsDict = new();
     public bool gameEnded = false;
     public int turnCount = 0;
-    public Node hunterSpawn, hiddenSpawn = null;
-    protected int hiddenPlayerLocation;
-    protected int[] hunterPlayerLocations;
+    public Node scannerSpawn, trojanSpawn = null;
+    protected int trojanPlayerLocation;
+    protected int[] scannerPlayerLocations;
     public List<NodeLink> nodeLinksList = new();
     public List<(int,int[])> scanHistory;
     //Scan History is (node id, adjacent nodes shown array)
@@ -112,13 +112,13 @@ public class GameController : MonoBehaviour
     //Get PlayerPiece object relating to current player
     public PlayerPiece GetCurrentPlayerPiece()
     {
-        PlayerPiece curPlayerPiece = currentTurnPlayer==0 ? hiddenPlayerPiece : playerPiecesList[currentTurnPlayer-1];
+        PlayerPiece curPlayerPiece = currentTurnPlayer==0 ? trojanPlayerPiece : playerPiecesList[currentTurnPlayer-1];
         return curPlayerPiece;
     }
     //Get PlayerPiece object of Local Player
     public PlayerPiece GetLocalPlayerPiece()
     {
-        return localPlayerID==0 ? hiddenPlayerPiece : playerPiecesList[localPlayerID-1];
+        return localPlayerID==0 ? trojanPlayerPiece : playerPiecesList[localPlayerID-1];
     }
     //Handling on-start variables, etc. Needed as game can restart.
     public void StartGame(bool restart = false)
@@ -132,17 +132,17 @@ public class GameController : MonoBehaviour
         gameEnded = false;
         nodesDict = new Dictionary<int, Node>();
         playerPiecesList = new List<PlayerPiece>();
-        hiddenPlayerPiece = null;
+        trojanPlayerPiece = null;
         currentPlayerMoves = 0;
         lastInfectedNode = -1;
         currentPlayerDidSpecialAction = false;
         infectedNodeIDs = new List<int>();
         currentTurnPlayer = 0;
         turnCount = 0;
-        hunterSpawn = null;
-        hiddenSpawn = null;
-        hiddenPlayerLocation = -1;
-        hunterPlayerLocations = null;
+        scannerSpawn = null;
+        trojanSpawn = null;
+        trojanPlayerLocation = -1;
+        scannerPlayerLocations = null;
         nodeLinksList = new List<NodeLink>();
         targetNodeIDs = new List<int>();
         cachedPaths = new();
@@ -155,18 +155,18 @@ public class GameController : MonoBehaviour
         // Find marked spawns for each team
         try
         {
-            GameObject[] hunterSpawns = GameObject.FindGameObjectsWithTag("HunterSpawn");
-            hunterSpawn = hunterSpawns[0].GetComponent<Node> ();
-            GameObject[] hiddenSpawns = GameObject.FindGameObjectsWithTag("HiddenSpawn");
-            hiddenSpawn = hiddenSpawns[0].GetComponent<Node> ();
+            GameObject[] scannerSpawns = GameObject.FindGameObjectsWithTag("ScannerSpawn");
+            scannerSpawn = scannerSpawns[0].GetComponent<Node> ();
+            GameObject[] trojanSpawns = GameObject.FindGameObjectsWithTag("TrojanSpawn");
+            trojanSpawn = trojanSpawns[0].GetComponent<Node> ();
         }
         catch (UnityException)
         {
             
         }
-        if (hunterSpawn != null && hiddenSpawn != null)
+        if (scannerSpawn != null && trojanSpawn != null)
         {
-            this.SetupPlayerPositions(hunterSpawn, hiddenSpawn);
+            this.SetupPlayerPositions(scannerSpawn, trojanSpawn);
         }
     }
 
@@ -176,11 +176,11 @@ public class GameController : MonoBehaviour
     //Ends the game with a message and initiates restart process.
     public void EndGame(bool hiddenwin)
     {
-        if (hiddenPlayerPiece == null)
+        if (trojanPlayerPiece == null)
         {
-            PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            hiddenPlayer.SetHidden(true);
-            hiddenPlayer.setNode(hiddenPlayerLocation,false);
+            PlayerPiece trojanPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            trojanPlayer.SetHidden(true);
+            trojanPlayer.setNode(trojanPlayerLocation,false);
         }
         if(!autoProgressTurn)
         {
@@ -293,6 +293,10 @@ public class GameController : MonoBehaviour
         bool isHumanPlayer = playerBotControllers[playerID] == null || botProfile.name == "Human";
         return isHumanPlayer;
     }
+    public float GetCurrentPlayerMood()
+    {
+        return playerBotControllers[currentTurnPlayer].GetCurrentMood();
+    }
     public float GetOthersAvgMood(int myTeam)
     {
         float sum = 0;
@@ -366,29 +370,33 @@ public class GameController : MonoBehaviour
         for ( int i=0; i < mapSize ; i++ )
         {
             for ( int j=0; j < mapSize; j++ )
-            {
+            { // Iterate over each column and row in series
+                // Each node is placed visually on the map in a grid pattern where
+                // every value increase is up and to the right, wrapping around for
+                // mapSize entries
                 float zLoc = (totalHorizLength/2) - nodeHorizDist * (i+j);
                 float xLoc = nodeVertDist/2*(j-i);
                 cachedDestsAdjs[currentNodeID-1] = new();
+                
+                // The actual node object is instantiated here at the coordinates
                 Node newNode = Instantiate(nodePrefab, new Vector3(xLoc, 0, zLoc), Quaternion.identity);
                 newNode.nodeID = currentNodeID;
                 newNode.gameObject.name = "Node"+currentNodeID;
                 nodesDict.Add(currentNodeID, newNode);
-                // Setup Spawn Points
+                // Tag them if they are either ID = 1, or ID = mapSize^2
                 if(currentNodeID == 1)
-                    newNode.gameObject.tag = "HunterSpawn";
+                    newNode.gameObject.tag = "ScannerSpawn";
                 else if(currentNodeID == mapSize * mapSize)
-                    newNode.gameObject.tag = "HiddenSpawn";
+                    newNode.gameObject.tag = "TrojanSpawn";
 
                 // Test for nodes above left and below left, and connect this one to them if within range
-                
                 if (currentNodeID-mapSize > 0)
-                {
+                { // Nodes below left (wrapped around after reaching mapSize)
                     NodeLink newLink = new(currentNodeID,currentNodeID-mapSize);
                     nodeLinksList.Add(newLink);
                 }
                 if (currentNodeID-1 > 0 && (currentNodeID-1) % mapSize != 0)
-                {
+                { // Nodes above left
                     NodeLink newLink = new(currentNodeID,currentNodeID-1);
                     nodeLinksList.Add(newLink);
                 }
@@ -445,21 +453,21 @@ public class GameController : MonoBehaviour
     }
 
     // Sets up the players' positions upon first starting, and generates visual representations for each (if applicable).
-    void SetupPlayerPositions(Node hunterSpawn, Node hiddenSpawn)
+    void SetupPlayerPositions(Node scannerSpawn, Node trojanSpawn)
     {
         if(this.playersCount < 2) 
             return;
         //Init all player locations
-        hiddenPlayerLocation = hiddenSpawn.nodeID;
-        hunterPlayerLocations = new int[this.playersCount-1];
-        Array.Fill(hunterPlayerLocations,hunterSpawn.nodeID);
+        trojanPlayerLocation = trojanSpawn.nodeID;
+        scannerPlayerLocations = new int[this.playersCount-1];
+        Array.Fill(scannerPlayerLocations,scannerSpawn.nodeID);
         for(int i = 1; i<playersCount; i++)
         {
             PlayerPiece newPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
             newPlayer.SetHidden(false);
             newPlayer.gameObject.name = $"Player{i}";
             newPlayer.playerID = i;
-            newPlayer.setNode(hunterPlayerLocations[i-1],false);
+            newPlayer.setNode(scannerPlayerLocations[i-1],false);
             playerPiecesList.Add(newPlayer);
         }
         if (logToCSV)
@@ -467,7 +475,7 @@ public class GameController : MonoBehaviour
             // Log starting positions of players: Action 3
             for(int i = 0; i<playersCount; i++)
             {
-                FileLogger.mainInstance.WriteLineToLog($"|{i}|3|{(i==0 ? hiddenPlayerLocation : hunterPlayerLocations[i-1])}|");
+                FileLogger.mainInstance.WriteLineToLog($"|{i}|3|{(i==0 ? trojanPlayerLocation : scannerPlayerLocations[i-1])}|");
             }
         }
         ProgressTurn(false);
@@ -602,14 +610,14 @@ public class GameController : MonoBehaviour
     {
         Vector3 offset = new(0,0.55f,0);
 
-        Node hiddenPlayerNode = Node.GetNode(hiddenPlayerLocation);
-        int dist = GetPathLength(toScan.nodeID, hiddenPlayerNode.nodeID);
+        Node trojanPlayerNode = Node.GetNode(trojanPlayerLocation);
+        int dist = GetPathLength(toScan.nodeID, trojanPlayerNode.nodeID);
         scanHistory.Add((toScan.nodeID, dist));
         Debug.Log($"The Distance to the Trojan from node {toScan.nodeID} is {dist} Nodes");
         DistanceTextPopup textPopup = Instantiate(textPopupPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         textPopup.transform.position = transform.position = toScan.transform.position + offset;
         textPopup.SetText(dist.ToString()+" Away",mainCam);
-        if(toScan.nodeID == hiddenPlayerLocation)
+        if(toScan.nodeID == trojanPlayerLocation)
         {
             EndGame(false);
             return;
@@ -617,7 +625,7 @@ public class GameController : MonoBehaviour
     }*/
     public bool TryNodeTrack(Node toTrack)
     {
-        if(toTrack.nodeID == hiddenPlayerLocation)
+        if(toTrack.nodeID == trojanPlayerLocation)
         {
             if(logToCSV)
             {
@@ -626,7 +634,7 @@ public class GameController : MonoBehaviour
             EndGame(false);
             return true;
         }
-        List<int> closestNodes = GetClosestAdjToDest(toTrack.nodeID, hiddenPlayerLocation);
+        List<int> closestNodes = GetClosestAdjToDest(toTrack.nodeID, trojanPlayerLocation);
         Vector3 offset = new(0,0.55f,0);
 
         foreach(int i in closestNodes){
@@ -738,11 +746,11 @@ public class GameController : MonoBehaviour
         PlayerPiece currentPlayerPiece = GetCurrentPlayerPiece();
         if(currentTurnPlayer==0)
         {
-            hiddenPlayerLocation = destID;
+            trojanPlayerLocation = destID;
         }
         else 
         {
-            hunterPlayerLocations[currentTurnPlayer-1] = destID;
+            scannerPlayerLocations[currentTurnPlayer-1] = destID;
         }
         if (currentPlayerPiece != null)
             currentPlayerPiece.setNode(destID,useSmoothMove);
@@ -759,7 +767,7 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            return (player == 0) ? hiddenPlayerLocation : hunterPlayerLocations[player-1];
+            return (player == 0) ? trojanPlayerLocation : scannerPlayerLocations[player-1];
         }
     }
     public void ProgressTurn(bool increment = true)
@@ -826,8 +834,8 @@ public class GameController : MonoBehaviour
         {
             if(localPlayerID != 0)
             {
-                if(hiddenPlayerPiece != null)
-                    Destroy(hiddenPlayerPiece.gameObject);
+                if(trojanPlayerPiece != null)
+                    Destroy(trojanPlayerPiece.gameObject);
                 
             }
             if(currentTurnPlayer == playersCount-1)
@@ -838,9 +846,9 @@ public class GameController : MonoBehaviour
         foreach (PlayerPiece pp in playerPiecesList){
             pp.SetPlayerMarker(false);
         }
-        if(hiddenPlayerPiece != null)
+        if(trojanPlayerPiece != null)
         {
-            hiddenPlayerPiece.SetPlayerMarker(false);
+            trojanPlayerPiece.SetPlayerMarker(false);
         }
         /*mainCam.GetComponent<CameraMover>().ClearFollowTarget();
         if (currentTurnPlayer == localPlayerID)
@@ -878,15 +886,15 @@ public class GameController : MonoBehaviour
                 infectedNodeIDs.Remove(nodePair.Value.nodeID);
             }
         }
-        if(localPlayerID == 0 && hiddenPlayerPiece == null)
+        if(localPlayerID == 0 && trojanPlayerPiece == null)
         {
             //Debug.Log("Making new hidden player piece");
-            PlayerPiece hiddenPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
-            hiddenPlayer.SetHidden(true);
-            hiddenPlayer.gameObject.name = "Player0";
-            hiddenPlayer.playerID = 0;
-            hiddenPlayer.setNode(hiddenPlayerLocation,false);
-            hiddenPlayerPiece = hiddenPlayer;
+            PlayerPiece trojanPlayer = Instantiate(playerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+            trojanPlayer.SetHidden(true);
+            trojanPlayer.gameObject.name = "Player0";
+            trojanPlayer.playerID = 0;
+            trojanPlayer.setNode(trojanPlayerLocation,false);
+            trojanPlayerPiece = trojanPlayer;
         }
     }
 
@@ -911,11 +919,6 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            // Only generate this sometimes
-            /*if (Random.value > sendChatChance || chattedCurrentTurn.Contains(player))
-            {
-                return;
-            }*/
             actionLog = actionLog ?? "";
             personalityParams = personalityParams ?? "";
             
@@ -1261,7 +1264,7 @@ public class GameController : MonoBehaviour
     }
     public int[] GetHunterPos()
     {
-        return hunterPlayerLocations;
+        return scannerPlayerLocations;
     }
     public float GetDistFromHunters(int nodeID)
     {
@@ -1270,7 +1273,7 @@ public class GameController : MonoBehaviour
             return 0;
         for (int i=0; i<playersCount-1; i++)
         {
-            sum += GetNodeDist(nodeID,hunterPlayerLocations[i]);
+            sum += GetNodeDist(nodeID,scannerPlayerLocations[i]);
         }
         return sum/(playersCount-1);
     }

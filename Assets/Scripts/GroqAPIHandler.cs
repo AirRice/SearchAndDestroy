@@ -17,8 +17,8 @@ public class GroqAPIHandler
 
         JObject request = new()
         {
-            ["model"] = "mixtral-8x7b-32768", // Other models: llama2-70b-chat, gemma-7b-it, llama3-70b-8192, llama3-8b-8192
-            ["temperature"] = 0,
+            ["model"] = "llama3-70b-8192", // Other models: llama2-70b-chat, gemma-7b-it, llama3-70b-8192, llama3-8b-8192
+            ["temperature"] = 1,
             ["max_tokens"] = 1024,
             ["top_p"] = 1,
             ["stop"] = "TERMINATE",

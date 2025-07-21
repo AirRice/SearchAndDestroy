@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerID: 0
-  hunterMat: {fileID: 2100000, guid: 254f7fbab88c53046ab64057aed44d1e, type: 2}
+  scannerMat: {fileID: 2100000, guid: 254f7fbab88c53046ab64057aed44d1e, type: 2}
   hiddenMat: {fileID: 2100000, guid: 55264b13df06f9a4b8562db8f17cbac2, type: 2}
   currentNodeID: 0
 --- !u!1 &7285571803276151229

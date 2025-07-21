@@ -67,8 +67,8 @@ public class UnifiedScan : BotTemplate
             int minNode = -1;
             foreach(int nodeID in gcr.GetAdjacentNodes(currentLocation, gcr.currentPlayerMoves - 1))
             {
-                int[] hunterPositions = gcr.GetHunterPos();
-                foreach(int allyPos in hunterPositions)
+                int[] scannerPositions = gcr.GetHunterPos();
+                foreach(int allyPos in scannerPositions)
                 {
                     if (allyPos != currentLocation && gcr.GetIsNodeDiagonalFromSource(allyPos, nodeID))
                     {
@@ -246,7 +246,7 @@ public class UnifiedScan : BotTemplate
                 // Add the hidden player's spawn if it's the first time (first turn expected)
                 for ( int i = 1; i <= mapSizeSq; i++ )
                 {
-                    UnifiedScan.possibleLocations.Add(i, (i == gcr.hiddenSpawn.nodeID));
+                    UnifiedScan.possibleLocations.Add(i, (i == gcr.trojanSpawn.nodeID));
                 }
             }
 

@@ -113,6 +113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nodeID: 0
   lineHandlerPrefab: {fileID: 1262224276135761066, guid: 63613b0d2e549bd4cb75970f55addcfe, type: 3}
+  lineMovedMat: {fileID: 2100000, guid: 35728eb2a7d53da4591c1c8166afc174, type: 2}
   lineScanMat: {fileID: 2100000, guid: 23e4ef1b3178a7b41be78339f57a0c55, type: 2}
   lineActiveMat: {fileID: 2100000, guid: d379612467c35d34d9e1e459e9d9ebcf, type: 2}
   lineMat: {fileID: 2100000, guid: cc6bf9d15d8b6af4a9693de915d8aed4, type: 2}
@@ -120,6 +121,8 @@ MonoBehaviour:
   infectedMat: {fileID: 2100000, guid: 22253e1eb4ac1ec49bfbe9ae5989a30a, type: 2}
   infectedSelectedMat: {fileID: 2100000, guid: 104814827fb6d824d803b9befe5b6200, type: 2}
   selectedMat: {fileID: 2100000, guid: 6e1558b646ef53b4b8e7b9ab5eb1145e, type: 2}
+  traversedMat: {fileID: 2100000, guid: a7b3fb19171e7b4428d693fc9e2511a1, type: 2}
+  scannedMat: {fileID: 2100000, guid: a5f5617c74fac3d4cad9618cd356f8fd, type: 2}
   targetMat: {fileID: 2100000, guid: ed0a4e716cbcb9947bbc5e353d58c373, type: 2}
   targetClaimedMat: {fileID: 2100000, guid: f791a0288f004d647b71c19f33fa179e, type: 2}
   isTarget: 0

@@ -54,10 +54,10 @@ public class SettingsHud : MonoBehaviour
         botProfilesList.Add("Human");
 
         botDropdownList.Add(root.Q<DropdownField>("trojanBotDropdown"));
-        botDropdownList.Add(root.Q<DropdownField>("hunterBot1Dropdown"));
-        botDropdownList.Add(root.Q<DropdownField>("hunterBot2Dropdown"));
-        botDropdownList.Add(root.Q<DropdownField>("hunterBot3Dropdown"));
-        botDropdownList.Add(root.Q<DropdownField>("hunterBot4Dropdown"));
+        botDropdownList.Add(root.Q<DropdownField>("scannerBot1Dropdown"));
+        botDropdownList.Add(root.Q<DropdownField>("scannerBot2Dropdown"));
+        botDropdownList.Add(root.Q<DropdownField>("scannerBot3Dropdown"));
+        botDropdownList.Add(root.Q<DropdownField>("scannerBot4Dropdown"));
         for(int i = 0; i < botDropdownList.Count; i++)
         {
             botDropdownList[i].choices = botProfilesList;
@@ -174,12 +174,21 @@ public class SettingsHud : MonoBehaviour
             {
                 for(int plCount = 2; plCount <= 5; plCount++)
                 {
-                    List<string> bots = new(){ "GreedyTrojanE"};
-                    for (int j = 0; j < (plCount-1); j++)
+                    foreach(string tProf in new string[] { "GreedyTrojanE", "CautiousTrojanE"})
                     {
-                        bots.Add("SoloScannerE");
+                        foreach(string sProf in new string[] { "ClosestScannerE", "MiddleSplitScannerE", "SoloScannerE"})
+                        {          
+                            if(!(tProf.Equals("GreedyTrojanE") && sProf.Equals("SoloScannerE")))
+                            {
+                                List<string> bots = new(){tProf};
+                                for (int j = 0; j < (plCount-1); j++)
+                                {
+                                    bots.Add(sProf);
+                                }
+                                cfgList.Add(new ConfigData(mapsize, plCount, 3, 100, 250, objPairs, 0, true, true, false, true, bots.ToArray()));
+                            }
+                        }
                     }
-                    cfgList.Add(new ConfigData(mapsize, plCount, 3, 100, 250, objPairs, 0, true, true, false, true, bots.ToArray()));
                 }
             }
         }
